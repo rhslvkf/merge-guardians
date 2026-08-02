@@ -1,0 +1,72 @@
+/**
+ * Layout and structural constants.
+ *
+ * These are *structural* values (board shape, margins, breakpoints), not balance
+ * values. Anything a designer would tune to change difficulty lives in
+ * config/*.json instead — see rule 1 in CLAUDE.md.
+ */
+
+/** Board columns. */
+export const GRID_COLS = 7;
+
+/** Board rows. Row 0 is the spawn row, row GRID_ROWS - 1 is the leak row. */
+export const GRID_ROWS = 8;
+
+/** Rows 0..ENEMY_ROWS-1 are the enemy approach area — units may not be placed there. */
+export const ENEMY_ROWS = 4;
+
+/** Topmost row the player may occupy by default. `boardExpand` lowers this to 3. */
+export const ALLY_TOP_ROW_DEFAULT = 4;
+
+/** Topmost row the player may occupy after the `boardExpand` upgrade. */
+export const ALLY_TOP_ROW_EXPANDED = 3;
+
+/** Crossing this row costs a life. */
+export const LEAK_ROW = GRID_ROWS - 1;
+
+/** Horizontal breathing room on each side of the board, in CSS pixels. */
+export const SIDE_MARGIN = 16;
+
+/** Top HUD band: clamp(H * ratio, min, max). */
+export const HUD_HEIGHT = { ratio: 0.12, min: 72, max: 140 } as const;
+
+/** Bottom summon/reward dock: clamp(H * ratio, min, max). */
+export const DOCK_HEIGHT = { ratio: 0.14, min: 88, max: 160 } as const;
+
+/** Below this measured CSS cell size, touch targets stop being reliably tappable. */
+export const MIN_TOUCH_CELL_PX = 44;
+
+/** Above this width/height ratio we have room for the side HUD panels. */
+export const WIDE_LAYOUT_ASPECT = 1.2;
+
+/** Vite replaces `__DEBUG__` at build time so debug logging drops out of production. */
+declare const __DEBUG__: boolean;
+export const DEBUG: boolean = typeof __DEBUG__ === 'undefined' ? false : __DEBUG__;
+
+/** Scene keys, so no scene is started by a bare string literal. */
+export const SceneKey = {
+  Boot: 'BootScene',
+  Preload: 'PreloadScene',
+  Menu: 'MenuScene',
+  Game: 'GameScene',
+  UI: 'UIScene',
+  Result: 'ResultScene',
+} as const;
+
+export type SceneKeyName = (typeof SceneKey)[keyof typeof SceneKey];
+
+/** Cross-scene event names. GameScene and UIScene only ever talk through these. */
+export const GameEvent = {
+  LayoutChanged: 'layout:changed',
+  EnergyChanged: 'run:energy-changed',
+  LivesChanged: 'run:lives-changed',
+  WaveStarted: 'wave:started',
+  WaveCleared: 'wave:cleared',
+  StageCleared: 'stage:cleared',
+  UpgradeOffered: 'upgrade:offered',
+  UpgradePicked: 'upgrade:picked',
+  SummonRequested: 'summon:requested',
+  GameOver: 'run:game-over',
+  Paused: 'run:paused',
+  Resumed: 'run:resumed',
+} as const;

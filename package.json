@@ -1,0 +1,22 @@
+{
+  "name": "merge-guardians",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Merge x lane-defense HTML5 game for web portals (Poki / CrazyGames)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "simulate": "tsx tools/simulate.ts"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}

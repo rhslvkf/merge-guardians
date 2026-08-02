@@ -1,0 +1,173 @@
+{
+  "$comment": "Stage = 5 waves, the 5th is always a boss. waveIndex is cumulative across stages, so stage 3 wave 3 is waveIndex 12 and feeds the enemy HP formula directly.",
+  "version": 1,
+
+  "wavesPerStage": 5,
+  "defaultSpawnIntervalSeconds": 1.8,
+  "interWaveDelaySeconds": 1.0,
+
+  "$modifiers": ["none", "blockedColumn", "bomb", "fog", "rush"],
+  "$spawnEntry": "{ type, count, delaySeconds } - delaySeconds offsets the group from the wave start; columns are picked by WaveRunner.",
+
+  "stages": [
+    {
+      "id": 1,
+      "name": "stage.1.name",
+      "waves": [
+        {
+          "waveIndex": 0,
+          "modifier": "none",
+          "spawnIntervalSeconds": 2.2,
+          "spawns": [{ "type": "normal", "count": 6, "delaySeconds": 0 }]
+        },
+        {
+          "waveIndex": 1,
+          "modifier": "none",
+          "spawnIntervalSeconds": 2.0,
+          "spawns": [
+            { "type": "normal", "count": 8, "delaySeconds": 0 },
+            { "type": "flyer", "count": 2, "delaySeconds": 6 }
+          ]
+        },
+        {
+          "waveIndex": 2,
+          "modifier": "blockedColumn",
+          "spawnIntervalSeconds": 1.9,
+          "spawns": [
+            { "type": "normal", "count": 8, "delaySeconds": 0 },
+            { "type": "shielded", "count": 3, "delaySeconds": 5 }
+          ]
+        },
+        {
+          "waveIndex": 3,
+          "modifier": "rush",
+          "spawnIntervalSeconds": 1.8,
+          "spawns": [
+            { "type": "normal", "count": 10, "delaySeconds": 0 },
+            { "type": "flyer", "count": 3, "delaySeconds": 4 },
+            { "type": "tank", "count": 1, "delaySeconds": 10 }
+          ]
+        },
+        {
+          "waveIndex": 4,
+          "modifier": "none",
+          "spawnIntervalSeconds": 1.8,
+          "spawns": [
+            { "type": "normal", "count": 6, "delaySeconds": 0 },
+            { "type": "boss", "count": 1, "delaySeconds": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "stage.2.name",
+      "waves": [
+        {
+          "waveIndex": 5,
+          "modifier": "none",
+          "spawnIntervalSeconds": 1.8,
+          "spawns": [
+            { "type": "normal", "count": 10, "delaySeconds": 0 },
+            { "type": "shielded", "count": 3, "delaySeconds": 6 }
+          ]
+        },
+        {
+          "waveIndex": 6,
+          "modifier": "bomb",
+          "spawnIntervalSeconds": 1.7,
+          "spawns": [
+            { "type": "normal", "count": 9, "delaySeconds": 0 },
+            { "type": "tank", "count": 2, "delaySeconds": 7 }
+          ]
+        },
+        {
+          "waveIndex": 7,
+          "modifier": "fog",
+          "spawnIntervalSeconds": 1.7,
+          "spawns": [
+            { "type": "normal", "count": 8, "delaySeconds": 0 },
+            { "type": "flyer", "count": 4, "delaySeconds": 5 },
+            { "type": "shielded", "count": 3, "delaySeconds": 11 }
+          ]
+        },
+        {
+          "waveIndex": 8,
+          "modifier": "rush",
+          "spawnIntervalSeconds": 1.6,
+          "spawns": [
+            { "type": "normal", "count": 12, "delaySeconds": 0 },
+            { "type": "tank", "count": 2, "delaySeconds": 8 },
+            { "type": "shielded", "count": 4, "delaySeconds": 12 }
+          ]
+        },
+        {
+          "waveIndex": 9,
+          "modifier": "blockedColumn",
+          "spawnIntervalSeconds": 1.6,
+          "spawns": [
+            { "type": "normal", "count": 8, "delaySeconds": 0 },
+            { "type": "flyer", "count": 3, "delaySeconds": 4 },
+            { "type": "boss", "count": 1, "delaySeconds": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "stage.3.name",
+      "waves": [
+        {
+          "waveIndex": 10,
+          "modifier": "none",
+          "spawnIntervalSeconds": 1.6,
+          "spawns": [
+            { "type": "normal", "count": 10, "delaySeconds": 0 },
+            { "type": "shielded", "count": 4, "delaySeconds": 5 },
+            { "type": "tank", "count": 2, "delaySeconds": 10 }
+          ]
+        },
+        {
+          "waveIndex": 11,
+          "modifier": "fog",
+          "spawnIntervalSeconds": 1.5,
+          "spawns": [
+            { "type": "normal", "count": 10, "delaySeconds": 0 },
+            { "type": "flyer", "count": 5, "delaySeconds": 4 },
+            { "type": "shielded", "count": 4, "delaySeconds": 9 }
+          ]
+        },
+        {
+          "waveIndex": 12,
+          "modifier": "bomb",
+          "spawnIntervalSeconds": 1.5,
+          "spawns": [
+            { "type": "normal", "count": 12, "delaySeconds": 0 },
+            { "type": "tank", "count": 3, "delaySeconds": 7 },
+            { "type": "shielded", "count": 4, "delaySeconds": 13 }
+          ]
+        },
+        {
+          "waveIndex": 13,
+          "modifier": "rush",
+          "spawnIntervalSeconds": 1.4,
+          "spawns": [
+            { "type": "normal", "count": 14, "delaySeconds": 0 },
+            { "type": "flyer", "count": 5, "delaySeconds": 5 },
+            { "type": "tank", "count": 3, "delaySeconds": 11 }
+          ]
+        },
+        {
+          "waveIndex": 14,
+          "modifier": "blockedColumn",
+          "spawnIntervalSeconds": 1.4,
+          "spawns": [
+            { "type": "normal", "count": 10, "delaySeconds": 0 },
+            { "type": "shielded", "count": 4, "delaySeconds": 6 },
+            { "type": "boss", "count": 1, "delaySeconds": 3 }
+          ]
+        }
+      ]
+    }
+  ]
+}

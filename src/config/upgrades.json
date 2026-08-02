@@ -1,0 +1,99 @@
+{
+  "$comment": "Draft pool for the post-wave 3-card choice. Effects last for the current run only. Cards whose cap is reached or whose condition fails are removed from the candidate list before drawing (see 'condition').",
+  "version": 1,
+
+  "cardsOffered": 3,
+
+  "$conditionVocabulary": {
+    "attackIntervalAboveFloor": "current attack interval > units.attackIntervalFloor",
+    "livesBelowMax": "run lives < run.maxLives",
+    "summonCostStepAboveFloor": "current summon cost step > energy.summonCostStepFloor",
+    "boardNotExpanded": "ally area has not been extended to row 3 yet",
+    "hasFreeAllyCell": "at least one free cell in the ally area",
+    "always": "no condition"
+  },
+
+  "pool": [
+    {
+      "id": "atkSpeed",
+      "nameKey": "upgrade.atkSpeed.name",
+      "descKey": "upgrade.atkSpeed.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "attackIntervalAboveFloor",
+      "effect": { "type": "attackIntervalMult", "value": 0.88, "floor": 0.25 }
+    },
+    {
+      "id": "dpsAll",
+      "nameKey": "upgrade.dpsAll.name",
+      "descKey": "upgrade.dpsAll.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "always",
+      "effect": { "type": "dpsMultAdd", "value": 0.1 }
+    },
+    {
+      "id": "summonCost",
+      "nameKey": "upgrade.summonCost.name",
+      "descKey": "upgrade.summonCost.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "summonCostStepAboveFloor",
+      "effect": { "type": "summonCostStepAdd", "value": -1, "floor": 0 }
+    },
+    {
+      "id": "energyRegen",
+      "nameKey": "upgrade.energyRegen.name",
+      "descKey": "upgrade.energyRegen.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "always",
+      "effect": { "type": "energyRegenAdd", "value": 0.4 }
+    },
+    {
+      "id": "startTier",
+      "nameKey": "upgrade.startTier.name",
+      "descKey": "upgrade.startTier.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "always",
+      "effect": { "type": "waveStartSpawn", "tier": 2, "count": 2 }
+    },
+    {
+      "id": "lifePlus",
+      "nameKey": "upgrade.lifePlus.name",
+      "descKey": "upgrade.lifePlus.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "livesBelowMax",
+      "effect": { "type": "lifeAdd", "value": 1, "cap": 5 }
+    },
+    {
+      "id": "instantT4",
+      "nameKey": "upgrade.instantT4.name",
+      "descKey": "upgrade.instantT4.desc",
+      "stackable": true,
+      "maxStacks": null,
+      "condition": "hasFreeAllyCell",
+      "effect": { "type": "instantSpawn", "tier": 4, "count": 1 }
+    },
+    {
+      "id": "boardExpand",
+      "nameKey": "upgrade.boardExpand.name",
+      "descKey": "upgrade.boardExpand.desc",
+      "stackable": false,
+      "maxStacks": 1,
+      "condition": "boardNotExpanded",
+      "effect": { "type": "allyTopRow", "value": 3 }
+    },
+    {
+      "id": "mergeHeal",
+      "nameKey": "upgrade.mergeHeal.name",
+      "descKey": "upgrade.mergeHeal.desc",
+      "stackable": false,
+      "maxStacks": 1,
+      "condition": "always",
+      "effect": { "type": "mergeHealNeighbours", "value": 0.3 }
+    }
+  ]
+}

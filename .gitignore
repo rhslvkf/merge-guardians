@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-portal/
+*.zip
+.DS_Store
+*.local
+.vite/
