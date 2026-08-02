@@ -4,8 +4,8 @@
 
 **▶ [플레이 (GitHub Pages)](https://rhslvkf.github.io/merge-guardians/)**
 
-> 현재 상태: **Phase 1 (그리드 + 드래그 합성)**. 적과 전투는 아직 없습니다.
-> SUMMON 버튼으로 T1 유닛을 만들고 드래그해 합성하는 것까지 동작합니다.
+> 현재 상태: **Phase 2 (적 · 전투 · 웨이브)**. SUMMON으로 유닛을 만들어 드래그로 합성하고,
+> 웨이브가 진행되며 유닛이 자동 사격합니다. 에너지 비용과 라이프는 Phase 3에서 붙습니다.
 > 진행 상황은 [docs/PROGRESS.md](docs/PROGRESS.md)를 참고하세요.
 
 ---

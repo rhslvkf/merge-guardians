@@ -3,7 +3,7 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 1 complete (grid + drag-merge). Phase 2 not started.**
+Status: **Phase 2 complete (enemies, combat, waves). Phase 3 not started.**
 
 ---
 
@@ -35,17 +35,28 @@ Status: **Phase 1 complete (grid + drag-merge). Phase 2 not started.**
       Energy cost follows in Phase 3
 - [x] i18n string table added so no display text is a literal (rule 8)
 
-## Phase 2 — Enemies, combat, waves
+## Phase 2 — Enemies, combat, waves (done)
 
-- [ ] `Enemy` entity + object pool
-- [ ] Column-wise descent at `1.6s / speedMult` per cell
-- [ ] `Projectile` entity + object pool, speed `cell * 9`/s
-- [ ] `CombatSystem`: target the nearest enemy in the column, `dps * attackInterval` per shot
-- [ ] Melee: enemy stops on an occupied cell, drains `meleeDps`, resumes on kill
-- [ ] Enemy types: normal / shielded (tier ≤ 3 immunity) / flyer (passes through) / tank / boss
-- [ ] Boss health bar at the top of the screen
-- [ ] `WaveRunner`: spawn schedule from `waves.json`, HP curve from `balance.json`
-- [ ] Wave-clear detection
+- [x] `Enemy` entity + object pool
+- [x] Column-wise descent at `1.6s / speedMult` per cell, interpolated rather
+      than snapped (position is `cellRow + progress`)
+- [x] `Projectile` entity + object pool, speed `cell * 9`/s expressed as rows
+      per second so it survives a resize unchanged
+- [x] `CombatSystem`: target the nearest enemy above in the column,
+      `dps * attackInterval` per shot
+- [x] Melee: enemy stops on the cell above a unit, drains `meleeDps`, resumes on kill
+- [x] Enemy types: normal / shielded (tier ≤ 3 immunity, "BLOCK" label) /
+      flyer (passes through) / tank / boss
+- [x] Boss health bar at the top of the screen
+- [x] `WaveRunner`: spawn schedule from `waves.json`, HP curve from `balance.json`
+- [x] Wave-clear detection, wave banner and remaining-enemy counter
+- [x] Enemies crossing the bottom row log `[LEAK]` and are removed. Life loss
+      is Phase 3
+- [x] Placeholder shapes baked to textures once per board size — Graphics
+      re-tessellates every frame, which cost 26 fps at 30 enemies
+
+Deliberately not in this phase: wave modifiers are read from `waves.json` and
+reported, but none are applied yet (Phase 4).
 
 ## Phase 3 — Energy, lives, game over
 

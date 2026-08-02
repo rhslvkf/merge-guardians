@@ -1,5 +1,9 @@
 {
   "debug.summon": "SUMMON",
   "summon.blocked.boardFull": "Board full",
-  "summon.blocked.energy": "Not enough energy"
+  "summon.blocked.energy": "Not enough energy",
+  "combat.block": "BLOCK",
+  "wave.banner": "WAVE {n}",
+  "wave.cleared": "WAVE CLEAR",
+  "hud.enemiesRemaining": "ENEMIES {n}"
 }

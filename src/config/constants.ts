@@ -43,6 +43,13 @@ export const WIDE_LAYOUT_ASPECT = 1.2;
 export const DRAG_THRESHOLD_PX = 8;
 
 /**
+ * Longest simulated step for one frame. A backgrounded tab can deliver a
+ * multi-second delta; without this, enemies would teleport down the board on
+ * return.
+ */
+export const MAX_FRAME_SECONDS = 0.05;
+
+/**
  * Presentation palette. Placeholder art only — Phase 6 replaces the drawn
  * shapes with sprites. These are colours, not balance, so they stay in code.
  */
@@ -59,6 +66,20 @@ export const Palette = {
   buttonFillPressed: 0x2563eb,
   buttonFillDisabled: 0x374151,
   buttonLabel: '#f8fafc',
+  hpBarBack: 0x0b0d14,
+  hpBarUnit: 0x4ade80,
+  hpBarEnemy: 0xf87171,
+  blockText: '#cbd5f5',
+  bannerText: '#e8ecf5',
+} as const;
+
+/** Placeholder enemy colours, one per type. Phase 6 replaces these with art. */
+export const EnemyPalette = {
+  normal: 0xef4444,
+  shielded: 0x94a3b8,
+  flyer: 0x38bdf8,
+  tank: 0xa855f7,
+  boss: 0xf59e0b,
 } as const;
 
 /**
@@ -77,7 +98,10 @@ export const TIER_HUE_LIGHTNESS = 0.58;
 export const Depth = {
   Board: 0,
   Unit: 2,
+  Enemy: 3,
+  Projectile: 4,
   Highlight: 5,
+  FloatingText: 6,
   Dragging: 10,
 } as const;
 
@@ -111,6 +135,9 @@ export const GameEvent = {
   WaveStarted: 'wave:started',
   WaveCleared: 'wave:cleared',
   StageCleared: 'stage:cleared',
+  EnemyCountChanged: 'wave:enemy-count',
+  /** Payload is the boss HP ratio 0..1, or -1 when no boss is on the board. */
+  BossHealthChanged: 'wave:boss-health',
   UpgradeOffered: 'upgrade:offered',
   UpgradePicked: 'upgrade:picked',
   SummonRequested: 'summon:requested',

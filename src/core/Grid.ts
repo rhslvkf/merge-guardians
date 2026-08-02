@@ -137,6 +137,21 @@ export class Grid {
     return true;
   }
 
+  /** Cell count, for index-based iteration that allocates no closure (rule 4). */
+  get cellCount(): number {
+    return this.cells.length;
+  }
+
+  unitAtIndex(index: number): Unit | null {
+    return this.cells[index];
+  }
+
+  /** Clear whichever cell holds this unit. Used when combat destroys it. */
+  removeUnitRef(unit: Unit): void {
+    const i = this.index(unit.col, unit.row);
+    if (this.cells[i] === unit) this.cells[i] = null;
+  }
+
   /** Visit every occupied cell — used to reposition units after a resize. */
   forEachUnit(callback: (unit: Unit) => void): void {
     for (let i = 0; i < this.cells.length; i++) {

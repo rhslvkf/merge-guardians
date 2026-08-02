@@ -35,6 +35,12 @@ export class RunState {
   /** Topmost row the player may occupy. `boardExpand` lowers this to 3. */
   allyTopRow: number = ALLY_TOP_ROW_DEFAULT;
 
+  /** Seconds between shots. `atkSpeed` upgrades shrink this (Phase 4). */
+  attackInterval: number = balance.units.attackInterval;
+
+  /** Run-wide unit damage multiplier. `dpsAll` upgrades raise it (Phase 4). */
+  dpsMult = 1;
+
   /** Highest tier a merge can produce. */
   readonly maxTier: number = balance.merge.maxTier;
 
@@ -48,6 +54,8 @@ export class RunState {
     this.summonsThisWave = 0;
     this.revivesUsed = 0;
     this.allyTopRow = ALLY_TOP_ROW_DEFAULT;
+    this.attackInterval = balance.units.attackInterval;
+    this.dpsMult = 1;
     // TODO(phase-7): apply permanent upgrades from SaveService here.
   }
 }

@@ -19,10 +19,25 @@ export function setLocale(locale: string): void {
   active = catalogs[locale] ?? catalogs.en;
 }
 
-export function t(key: string): string {
+export type TParams = Record<string, string | number>;
+
+/**
+ * Look up a string, substituting `{name}` placeholders from `params`.
+ *
+ * Word order differs between languages, so the placeholder has to travel inside
+ * the translated string rather than being concatenated by the caller.
+ */
+export function t(key: string, params?: TParams): string {
   const value = active[key];
-  if (value !== undefined) return value;
-  if (DEBUG) console.warn(`[i18n] missing key: ${key}`);
-  // Showing the key beats showing nothing when a translation is missing.
-  return key;
+  if (value === undefined) {
+    if (DEBUG) console.warn(`[i18n] missing key: ${key}`);
+    // Showing the key beats showing nothing when a translation is missing.
+    return key;
+  }
+  if (!params) return value;
+
+  return value.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const replacement = params[name];
+    return replacement === undefined ? match : String(replacement);
+  });
 }
