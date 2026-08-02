@@ -1,174 +1,71 @@
 {
   "$comment": "Stage = 5 waves, the 5th is always a boss. waveIndex is cumulative across stages, so stage 3 wave 3 is waveIndex 12 and feeds the enemy HP formula directly.",
-  "version": 1,
-
+  "version": 2,
   "wavesPerStage": 5,
-  "defaultSpawnIntervalSeconds": 1.8,
+  "totalWaves": 50,
   "interWaveDelaySeconds": 1.0,
-
-  "$modifiers": ["none", "blockedColumn", "bomb", "fog", "rush"],
-  "$spawnEntry": "{ type, count, delaySeconds } - delaySeconds offsets the group from the wave start; columns are picked by WaveRunner.",
-
-  "stages": [
-    {
-      "id": 1,
-      "name": "stage.1.name",
-      "waves": [
-        {
-          "waveIndex": 0,
-          "modifier": "none",
-          "spawnIntervalSeconds": 2.2,
-          "spawns": [{ "type": "normal", "count": 6, "delaySeconds": 0 }]
-        },
-        {
-          "waveIndex": 1,
-          "modifier": "none",
-          "spawnIntervalSeconds": 2.0,
-          "spawns": [
-            { "type": "normal", "count": 8, "delaySeconds": 0 },
-            { "type": "flyer", "count": 2, "delaySeconds": 6 }
-          ]
-        },
-        {
-          "$note": "No shielded in stage 1: it takes zero damage from tier <= 3, and a player three waves in cannot field a T4 without giving up column coverage. Shielded debuts in stage 2.",
-          "waveIndex": 2,
-          "modifier": "blockedColumn",
-          "spawnIntervalSeconds": 1.9,
-          "spawns": [
-            { "type": "normal", "count": 8, "delaySeconds": 0 },
-            { "type": "flyer", "count": 3, "delaySeconds": 5 }
-          ]
-        },
-        {
-          "waveIndex": 3,
-          "modifier": "rush",
-          "spawnIntervalSeconds": 1.8,
-          "spawns": [
-            { "type": "normal", "count": 10, "delaySeconds": 0 },
-            { "type": "flyer", "count": 3, "delaySeconds": 4 },
-            { "type": "tank", "count": 1, "delaySeconds": 10 }
-          ]
-        },
-        {
-          "waveIndex": 4,
-          "modifier": "none",
-          "spawnIntervalSeconds": 1.8,
-          "spawns": [
-            { "type": "normal", "count": 6, "delaySeconds": 0 },
-            { "type": "boss", "count": 1, "delaySeconds": 3 }
-          ]
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "name": "stage.2.name",
-      "waves": [
-        {
-          "waveIndex": 5,
-          "modifier": "none",
-          "spawnIntervalSeconds": 1.8,
-          "spawns": [
-            { "type": "normal", "count": 10, "delaySeconds": 0 },
-            { "type": "shielded", "count": 3, "delaySeconds": 6 }
-          ]
-        },
-        {
-          "waveIndex": 6,
-          "modifier": "bomb",
-          "spawnIntervalSeconds": 1.7,
-          "spawns": [
-            { "type": "normal", "count": 9, "delaySeconds": 0 },
-            { "type": "tank", "count": 2, "delaySeconds": 7 }
-          ]
-        },
-        {
-          "waveIndex": 7,
-          "modifier": "fog",
-          "spawnIntervalSeconds": 1.7,
-          "spawns": [
-            { "type": "normal", "count": 8, "delaySeconds": 0 },
-            { "type": "flyer", "count": 4, "delaySeconds": 5 },
-            { "type": "shielded", "count": 3, "delaySeconds": 11 }
-          ]
-        },
-        {
-          "waveIndex": 8,
-          "modifier": "rush",
-          "spawnIntervalSeconds": 1.6,
-          "spawns": [
-            { "type": "normal", "count": 12, "delaySeconds": 0 },
-            { "type": "tank", "count": 2, "delaySeconds": 8 },
-            { "type": "shielded", "count": 4, "delaySeconds": 12 }
-          ]
-        },
-        {
-          "waveIndex": 9,
-          "modifier": "blockedColumn",
-          "spawnIntervalSeconds": 1.6,
-          "spawns": [
-            { "type": "normal", "count": 8, "delaySeconds": 0 },
-            { "type": "flyer", "count": 3, "delaySeconds": 4 },
-            { "type": "boss", "count": 1, "delaySeconds": 3 }
-          ]
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "name": "stage.3.name",
-      "waves": [
-        {
-          "waveIndex": 10,
-          "modifier": "none",
-          "spawnIntervalSeconds": 1.6,
-          "spawns": [
-            { "type": "normal", "count": 10, "delaySeconds": 0 },
-            { "type": "shielded", "count": 4, "delaySeconds": 5 },
-            { "type": "tank", "count": 2, "delaySeconds": 10 }
-          ]
-        },
-        {
-          "waveIndex": 11,
-          "modifier": "fog",
-          "spawnIntervalSeconds": 1.5,
-          "spawns": [
-            { "type": "normal", "count": 10, "delaySeconds": 0 },
-            { "type": "flyer", "count": 5, "delaySeconds": 4 },
-            { "type": "shielded", "count": 4, "delaySeconds": 9 }
-          ]
-        },
-        {
-          "waveIndex": 12,
-          "modifier": "bomb",
-          "spawnIntervalSeconds": 1.5,
-          "spawns": [
-            { "type": "normal", "count": 12, "delaySeconds": 0 },
-            { "type": "tank", "count": 3, "delaySeconds": 7 },
-            { "type": "shielded", "count": 4, "delaySeconds": 13 }
-          ]
-        },
-        {
-          "waveIndex": 13,
-          "modifier": "rush",
-          "spawnIntervalSeconds": 1.4,
-          "spawns": [
-            { "type": "normal", "count": 14, "delaySeconds": 0 },
-            { "type": "flyer", "count": 5, "delaySeconds": 5 },
-            { "type": "tank", "count": 3, "delaySeconds": 11 }
-          ]
-        },
-        {
-          "waveIndex": 14,
-          "modifier": "blockedColumn",
-          "spawnIntervalSeconds": 1.4,
-          "spawns": [
-            { "type": "normal", "count": 10, "delaySeconds": 0 },
-            { "type": "shielded", "count": 4, "delaySeconds": 6 },
-            { "type": "boss", "count": 1, "delaySeconds": 3 }
-          ]
-        }
-      ]
-    }
-  ]
+  "$authoring": "Every wave is generated by core/rules.ts from the parameters below. Hand-written waves were the sole source of the difficulty cliffs the Phase 5 simulator found: total wave HP grows at exactly hpGrowthPerWave when the enemy counts are steady, and every >30% ratio drop traced back to a composition that jumped. Tune the ramp here, then re-run `npm run sim`.",
+  "$modifiers": [
+    "none",
+    "blockedColumn",
+    "bomb",
+    "fog",
+    "rush"
+  ],
+  "procedural": {
+    "spawnIntervalStart": 3.4,
+    "spawnIntervalEnd": 2.3,
+    "spawnIntervalFalloffWaves": 30,
+    "$modifierCycle": "Waves 1-5 keep the original tutorial order, then the full rotation.",
+    "modifierCycle": [
+      "none",
+      "none",
+      "blockedColumn",
+      "rush",
+      "none",
+      "bomb",
+      "fog",
+      "rush",
+      "blockedColumn",
+      "none"
+    ],
+    "$groups": "startWave delays a type's debut. shielded is last because it takes zero damage from tier <= 3, which a new player cannot answer.",
+    "groups": [
+      {
+        "type": "normal",
+        "startWave": 0,
+        "base": 6,
+        "perWave": 0.14,
+        "max": 14,
+        "delaySeconds": 0
+      },
+      {
+        "type": "flyer",
+        "startWave": 1,
+        "base": 3,
+        "perWave": 0.08,
+        "max": 6,
+        "delaySeconds": 4
+      },
+      {
+        "type": "tank",
+        "startWave": 3,
+        "base": 1,
+        "perWave": 0.05,
+        "max": 4,
+        "delaySeconds": 8
+      },
+      {
+        "type": "shielded",
+        "startWave": 5,
+        "base": 2,
+        "perWave": 0.07,
+        "max": 6,
+        "delaySeconds": 6
+      }
+    ],
+    "$bossWaveFillRatio": "Boss waves carry the normal groups at this share as well. Without it a boss wave weighed about half its neighbours, and the wave after it spiked 152%.",
+    "bossWaveFillRatio": 0.9,
+    "bossDelaySeconds": 3
+  }
 }

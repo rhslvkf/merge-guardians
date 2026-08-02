@@ -16,9 +16,21 @@ export type CellContent = 'empty' | 'unit' | 'rock' | 'bomb';
 
 export type { CellCoord };
 
-export class Grid {
+/**
+ * The only thing Grid needs from whatever it stores.
+ *
+ * Generic so `tools/simulate.ts` can put its own lightweight unit on the same
+ * board logic instead of reimplementing placement, blocking and free-cell
+ * search — the game keeps the `Unit` default and reads unchanged.
+ */
+export interface Placeable {
+  col: number;
+  row: number;
+}
+
+export class Grid<T extends Placeable = Unit> {
   /** Row-major, length GRID_COLS * GRID_ROWS. */
-  private readonly cells: (Unit | null)[] = new Array(GRID_COLS * GRID_ROWS).fill(null);
+  private readonly cells: (T | null)[] = new Array(GRID_COLS * GRID_ROWS).fill(null);
 
   /**
    * Column sealed off by the `blockedColumn` modifier, or -1.
@@ -83,7 +95,7 @@ export class Grid {
     return row * GRID_COLS + col;
   }
 
-  getUnit(col: number, row: number): Unit | null {
+  getUnit(col: number, row: number): T | null {
     if (!this.contains(col, row)) return null;
     return this.cells[this.index(col, row)];
   }
@@ -93,7 +105,7 @@ export class Grid {
   }
 
   /** Orthogonal neighbour of (col,row) — used by bomb blast and mergeHeal. */
-  neighbourUnit(col: number, row: number, index: 0 | 1 | 2 | 3): Unit | null {
+  neighbourUnit(col: number, row: number, index: 0 | 1 | 2 | 3): T | null {
     const dc = index === 0 ? -1 : index === 1 ? 1 : 0;
     const dr = index === 2 ? -1 : index === 3 ? 1 : 0;
     return this.getUnit(col + dc, row + dr);
@@ -102,7 +114,7 @@ export class Grid {
   // --- mutation ----------------------------------------------------------
 
   /** Place (or clear, with null) a unit and keep its own col/row in sync. */
-  setUnit(col: number, row: number, unit: Unit | null): void {
+  setUnit(col: number, row: number, unit: T | null): void {
     if (!this.contains(col, row)) return;
     this.cells[this.index(col, row)] = unit;
     if (unit) {
@@ -175,18 +187,18 @@ export class Grid {
     return this.cells.length;
   }
 
-  unitAtIndex(index: number): Unit | null {
+  unitAtIndex(index: number): T | null {
     return this.cells[index];
   }
 
   /** Clear whichever cell holds this unit. Used when combat destroys it. */
-  removeUnitRef(unit: Unit): void {
+  removeUnitRef(unit: T): void {
     const i = this.index(unit.col, unit.row);
     if (this.cells[i] === unit) this.cells[i] = null;
   }
 
   /** Visit every occupied cell — used to reposition units after a resize. */
-  forEachUnit(callback: (unit: Unit) => void): void {
+  forEachUnit(callback: (unit: T) => void): void {
     for (let i = 0; i < this.cells.length; i++) {
       const unit = this.cells[i];
       if (unit) callback(unit);

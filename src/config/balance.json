@@ -1,45 +1,53 @@
 {
   "$comment": "Single source of truth for every tunable number. Rule 1: never inline these in code.",
   "version": 1,
-
   "merge": {
     "multiplier": 2.4,
     "maxTier": 8,
     "$note": "Two units become one, so a multiplier below 2.0 removes the incentive to merge."
   },
-
   "units": {
     "attackInterval": 0.8,
     "attackIntervalFloor": 0.25,
     "hpPerDps": 3.0,
     "projectileSpeedCells": 9.0,
-    "tierDps": [10, 24, 58, 138, 332, 796, 1911, 4587],
+    "tierDps": [
+      10,
+      24,
+      58,
+      138,
+      332,
+      796,
+      1911,
+      4587
+    ],
     "$note": "damagePerShot = dps * attackInterval; maxHp = dps * hpPerDps; a merged unit spawns at full HP."
   },
-
   "energy": {
     "start": 12,
-    "max": 30,
-    "regenPerSecond": 1.2,
+    "max": 45,
+    "regenPerSecond": 2.8,
     "summonBaseCost": 3,
     "summonCostStep": 1,
     "summonCostStepFloor": 0,
     "energyPerKill": 1,
     "$note": "summonCost = summonBaseCost + summonCostStep * summonsThisWave; the counter resets each wave."
   },
-
   "run": {
     "startLives": 3,
     "maxLives": 5,
     "goldPerKill": 1
   },
-
   "enemies": {
     "baseHp": 40,
-    "hpGrowthPerWave": 1.28,
-    "secondsPerCell": 1.6,
+    "hpGrowthPerWave": 1.17,
+    "secondsPerCell": 2.8,
     "types": {
-      "normal": { "hpMult": 1.0, "speedMult": 1.0, "meleeDps": 12 },
+      "normal": {
+        "hpMult": 1.0,
+        "speedMult": 1.0,
+        "meleeDps": 12
+      },
       "shielded": {
         "hpMult": 1.4,
         "speedMult": 0.9,
@@ -54,9 +62,13 @@
         "ignoresUnits": true,
         "$note": "Walks through occupied cells without stopping, but can still be shot."
       },
-      "tank": { "hpMult": 3.0, "speedMult": 0.6, "meleeDps": 25 },
+      "tank": {
+        "hpMult": 3.0,
+        "speedMult": 0.6,
+        "meleeDps": 25
+      },
       "boss": {
-        "hpMult": 8.0,
+        "hpMult": 3.5,
         "speedMult": 0.5,
         "meleeDps": 40,
         "showTopHealthBar": true
@@ -64,36 +76,55 @@
     },
     "$hpFormula": "hp = baseHp * pow(hpGrowthPerWave, waveIndex) * typeHpMult"
   },
-
   "modifiers": {
     "bomb": {
       "fuseSeconds": 12,
       "$note": "Defused by consuming the bombed cell's unit in a merge; otherwise destroys that cell plus its 4 orthogonal neighbours."
     },
-    "fog": { "hiddenRows": [0, 1] },
-    "rush": { "spawnIntervalMult": 0.6, "enemyCountMult": 0.8 },
-    "blockedColumn": { "columns": 1 }
+    "fog": {
+      "hiddenRows": [
+        0,
+        1
+      ]
+    },
+    "rush": {
+      "spawnIntervalMult": 0.6,
+      "enemyCountMult": 0.9
+    },
+    "blockedColumn": {
+      "columns": 1
+    }
   },
-
   "meta": {
     "$note": "Permanent upgrades bought with accumulated gold. 3 levels each.",
     "startLife": {
       "maxLevel": 3,
-      "costs": [50, 150, 400],
+      "costs": [
+        50,
+        150,
+        400
+      ],
       "livesPerLevel": 1
     },
     "startEnergy": {
       "maxLevel": 3,
-      "costs": [40, 120, 320],
+      "costs": [
+        40,
+        120,
+        320
+      ],
       "energyPerLevel": 5
     },
     "dpsBoost": {
       "maxLevel": 3,
-      "costs": [80, 240, 600],
+      "costs": [
+        80,
+        240,
+        600
+      ],
       "dpsMultPerLevel": 0.05
     }
   },
-
   "ads": {
     "reviveLifeRestored": 1,
     "revivesPerRun": 1,

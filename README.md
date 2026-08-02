@@ -4,8 +4,8 @@
 
 **▶ [플레이 (GitHub Pages)](https://rhslvkf.github.io/merge-guardians/)**
 
-> 현재 상태: **Phase 4 (모디파이어 + 3택 업그레이드)**. 웨이브마다 모디파이어가 붙고,
-> 클리어할 때마다 3택 업그레이드를 고릅니다. 밸런스 튜닝은 Phase 5에서 합니다.
+> 현재 상태: **Phase 5 (밸런스 시뮬레이터)**. 10스테이지 50웨이브,
+> `npm run sim`으로 밸런스를 측정하고 조정합니다. 아트/사운드는 Phase 6에서 붙습니다.
 > 진행 상황은 [docs/PROGRESS.md](docs/PROGRESS.md)를 참고하세요.
 
 ---
@@ -51,7 +51,7 @@ npm run dev        # 개발 서버 (http://localhost:5173)
 npm run build      # 타입체크 + 프로덕션 빌드 → dist/
 npm run preview    # 빌드 결과 로컬 확인
 npm run typecheck  # tsc --noEmit
-npm run simulate   # 밸런스 시뮬레이터 (Phase 5에서 구현)
+npm run sim        # 밸런스 시뮬레이터 (CSV + 콘솔 표)
 ```
 
 Node 22 기준으로 개발 중입니다.
@@ -80,7 +80,7 @@ public/assets/
 | 파일 | 내용 |
 |---|---|
 | `balance.json` | 티어 DPS(T1~T8), 합성 배율, 에너지, 적 타입 5종, 모디파이어, 영구 업그레이드 |
-| `waves.json` | 스테이지/웨이브 구성 (현재 스테이지 1~3) |
+| `waves.json` | 웨이브 생성 파라미터 (10스테이지 50웨이브) |
 | `upgrades.json` | 3택 업그레이드 풀 9종과 등장 조건 |
 
 ---
@@ -91,6 +91,7 @@ public/assets/
 |---|---|
 | [docs/SPEC.md](docs/SPEC.md) | 고정된 설계 명세. 보드 구조, 전투 규칙, 적 수치, 업그레이드 풀, 포털 SDK 의무사항 |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Phase 1~8 체크리스트 |
+| [docs/BALANCE.md](docs/BALANCE.md) | 밸런스 수치의 근거와 변경 전후, 시뮬레이터 사용법 |
 | [CLAUDE.md](CLAUDE.md) | 코딩 규칙 10개와 AI 에이전트 작업 지침 |
 
 코드를 수정하기 전에 `docs/SPEC.md`를 먼저 읽으세요. 명세와 코드가 충돌하면 명세가 우선이며, 명세 자체를 바꿔야 한다면 같은 커밋에서 `docs/SPEC.md`를 함께 수정합니다.

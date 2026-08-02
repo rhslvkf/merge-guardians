@@ -1,7 +1,13 @@
 import Phaser from 'phaser';
 
-import balance from '../config/balance.json';
 import { EnemyPalette, Palette } from '../config/constants';
+import {
+  ENEMY_TYPES,
+  SECONDS_PER_CELL,
+  enemyHp,
+  type EnemyType,
+  type EnemyTypeConfig,
+} from '../core/rules';
 import { bakeTexture } from './shapeTextures';
 
 /**
@@ -17,29 +23,10 @@ import { bakeTexture } from './shapeTextures';
  * Pooled — never construct one directly outside EnemyPool (rule 4).
  */
 
-export type EnemyType = 'normal' | 'shielded' | 'flyer' | 'tank' | 'boss';
-
-export interface EnemyTypeConfig {
-  hpMult: number;
-  speedMult: number;
-  meleeDps: number;
-  /** shielded: projectiles from units at or below this tier deal no damage. */
-  immuneToTierAtOrBelow?: number;
-  /** flyer: walks through occupied cells and never attacks. */
-  ignoresUnits?: boolean;
-  showTopHealthBar?: boolean;
-}
-
-export const ENEMY_TYPES = balance.enemies.types as unknown as Record<EnemyType, EnemyTypeConfig>;
-
-const BASE_HP: number = balance.enemies.baseHp;
-const HP_GROWTH: number = balance.enemies.hpGrowthPerWave;
-export const SECONDS_PER_CELL: number = balance.enemies.secondsPerCell;
-
-/** hp = baseHp * pow(hpGrowthPerWave, waveIndex) * typeHpMult (spec 5). */
-export function enemyHpFor(type: EnemyType, waveIndex: number): number {
-  return BASE_HP * Math.pow(HP_GROWTH, waveIndex) * ENEMY_TYPES[type].hpMult;
-}
+// The stats and the HP curve live in core/rules so the simulator computes from
+// the same source. Re-exported here for the callers that already had them.
+export { ENEMY_TYPES, SECONDS_PER_CELL, enemyHp as enemyHpFor };
+export type { EnemyType, EnemyTypeConfig };
 
 const BODY_SCALE = 0.7;
 const HP_BAR_HEIGHT_RATIO = 0.08;
@@ -120,7 +107,7 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.col = col;
     this.cellRow = 0;
     this.progress = 0;
-    this.maxHp = enemyHpFor(type, waveIndex);
+    this.maxHp = enemyHp(type, waveIndex);
     this.hp = this.maxHp;
     this.meleeDps = config.meleeDps;
     this.speedMult = config.speedMult;

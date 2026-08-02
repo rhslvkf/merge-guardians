@@ -1,8 +1,13 @@
-import balance from '../config/balance.json';
-import { DEBUG, GRID_COLS } from '../config/constants';
-import wavesConfig from '../config/waves.json';
-import type { EnemyPool, EnemyType } from '../entities/Enemy';
+import type { EnemyPool } from '../entities/Enemy';
 import type { LayoutService } from '../services/LayoutService';
+import {
+  INTER_WAVE_DELAY_SECONDS,
+  WAVES_PER_STAGE,
+  buildWaveSchedule,
+  stageCount,
+  waveAt,
+  type ScheduledSpawn,
+} from './rules';
 import type { RunState } from './RunState';
 
 /**
@@ -17,43 +22,11 @@ import type { RunState } from './RunState';
 
 export type WaveModifier = 'none' | 'blockedColumn' | 'bomb' | 'fog' | 'rush';
 
-interface WaveSpawnGroup {
-  type: string;
-  count: number;
-  delaySeconds: number;
-}
-
-interface WaveConfig {
-  waveIndex: number;
-  modifier: string;
-  spawnIntervalSeconds: number;
-  spawns: WaveSpawnGroup[];
-}
-
-interface StageConfig {
-  id: number;
-  name: string;
-  waves: WaveConfig[];
-}
-
-interface ScheduledSpawn {
-  time: number;
-  type: EnemyType;
-  col: number;
-}
-
-const STAGES = wavesConfig.stages as StageConfig[];
-const WAVES_PER_STAGE: number = wavesConfig.wavesPerStage;
-export const INTER_WAVE_DELAY: number = wavesConfig.interWaveDelaySeconds;
-const RUSH = balance.modifiers.rush;
-
-/** Flat list of every wave in stage order, indexed by cumulative waveIndex. */
-const ALL_WAVES: WaveConfig[] = [];
-for (const stage of STAGES) for (const wave of stage.waves) ALL_WAVES.push(wave);
+export const INTER_WAVE_DELAY = INTER_WAVE_DELAY_SECONDS;
 
 /** True when waves.json defines the given 1-based stage. */
 export function hasStage(stageId: number): boolean {
-  return STAGES.some((stage) => stage.id === stageId);
+  return stageId >= 1 && stageId <= stageCount();
 }
 
 export class WaveRunner {
@@ -83,8 +56,7 @@ export class WaveRunner {
   }
 
   get modifier(): WaveModifier {
-    const wave = ALL_WAVES[this.run.waveIndex];
-    return (wave?.modifier ?? 'none') as WaveModifier;
+    return (waveAt(this.run.waveIndex)?.modifier ?? 'none') as WaveModifier;
   }
 
   /** Stage number (1-based) that the current waveIndex falls in. */
@@ -98,41 +70,17 @@ export class WaveRunner {
   }
 
   get hasWaveForCurrentIndex(): boolean {
-    return this.run.waveIndex < ALL_WAVES.length;
+    return waveAt(this.run.waveIndex) !== undefined;
   }
 
   /** Begin the wave at RunState's current cumulative waveIndex. */
   startWave(): void {
-    const wave = ALL_WAVES[this.run.waveIndex];
-    this.schedule = [];
+    // The timetable, including `rush`, is built by core/rules so the simulator
+    // schedules exactly the same fight.
+    this.schedule = buildWaveSchedule(this.run.waveIndex);
     this.nextSpawn = 0;
     this.elapsed = 0;
-    this.running = false;
-
-    if (!wave) return;
-
-    // `rush` is a scheduling modifier, so it belongs here rather than in
-    // ModifierSystem: tighter spacing, fewer enemies overall (spec 7).
-    const rush = wave.modifier === 'rush';
-    const interval = wave.spawnIntervalSeconds * (rush ? RUSH.spawnIntervalMult : 1);
-    const countMult = rush ? RUSH.enemyCountMult : 1;
-
-    // Building the schedule once per wave keeps the frame path allocation-free.
-    for (const group of wave.spawns) {
-      const count = Math.max(1, Math.round(group.count * countMult));
-      for (let i = 0; i < count; i++) {
-        this.schedule.push({
-          time: group.delaySeconds + i * interval,
-          type: group.type as EnemyType,
-          col: Math.floor(Math.random() * GRID_COLS),
-        });
-      }
-    }
-    if (DEBUG && rush) {
-      console.log(`[modifier] rush -> interval x${RUSH.spawnIntervalMult}, count x${RUSH.enemyCountMult}`);
-    }
-    this.schedule.sort((a, b) => a.time - b.time);
-    this.running = true;
+    this.running = this.schedule.length > 0;
   }
 
   update(dt: number): void {

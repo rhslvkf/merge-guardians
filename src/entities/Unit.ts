@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
 
-import balance from '../config/balance.json';
 import {
   Palette,
   TIER_HUE_LIGHTNESS,
   TIER_HUE_OFFSET,
   TIER_HUE_SATURATION,
 } from '../config/constants';
+import { MAX_TIER as RULES_MAX_TIER, tierDps, unitMaxHp } from '../core/rules';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
 import { bakeTexture } from './shapeTextures';
 
@@ -20,9 +20,7 @@ import { bakeTexture } from './shapeTextures';
  * upgrades are applied where damage is dealt, not baked in here.
  */
 
-const MAX_TIER: number = balance.merge.maxTier;
-const TIER_DPS: number[] = balance.units.tierDps;
-const HP_PER_DPS: number = balance.units.hpPerDps;
+const MAX_TIER = RULES_MAX_TIER;
 
 /** Even slices of the HSL wheel, so neighbouring tiers never look alike. */
 const TIER_FILL: number[] = [];
@@ -139,8 +137,8 @@ export class Unit extends Phaser.GameObjects.Container {
 
   private applyTierStats(tier: number): void {
     this.tier = Phaser.Math.Clamp(tier, 1, MAX_TIER);
-    this.dps = TIER_DPS[this.tier - 1];
-    this.maxHp = this.dps * HP_PER_DPS;
+    this.dps = tierDps(this.tier);
+    this.maxHp = unitMaxHp(this.tier);
     this.hp = this.maxHp;
   }
 

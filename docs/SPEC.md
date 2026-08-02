@@ -4,7 +4,8 @@ Frozen design spec. Sections 1–11 are the contract; code follows this document
 and any change to a rule here must be made here first.
 
 Numbers written in this document are *initial* values. Their runtime source is
-always `src/config/*.json` — see CLAUDE.md rule 1.
+always `src/config/*.json` — see CLAUDE.md rule 1. Values retuned in Phase 5 are
+recorded, with the measurements behind them, in `docs/BALANCE.md`.
 
 ---
 
@@ -91,8 +92,8 @@ Tier table (`balance.json` initial values):
 
 ## 5. Enemies
 
-- HP: `hp = 40 * pow(1.28, waveIndex) * typeHpMult`
-- Movement: `1.6s` per cell, divided by `typeSpeedMult`
+- HP: `hp = 40 * pow(1.17, waveIndex) * typeHpMult`
+- Movement: `2.8s` per cell, divided by `typeSpeedMult`
 - Kill reward: +1 energy, +1 gold
 
 | Type | hpMult | speedMult | meleeDps | Special |
@@ -101,13 +102,13 @@ Tier table (`balance.json` initial values):
 | shielded | 1.4 | 0.9 | 14 | Projectiles from units of tier ≤ 3 deal 0 damage |
 | flyer | 0.7 | 1.4 | 0 | Passes through occupied cells, never attacks in melee, still takes projectile damage |
 | tank | 3.0 | 0.6 | 25 | — |
-| boss | 8.0 | 0.5 | 40 | Separate health bar at the top of the screen |
+| boss | 3.5 | 0.5 | 40 | Separate health bar at the top of the screen |
 
 ---
 
 ## 6. Energy and summoning
 
-- Start 12, cap 30, regeneration 1.2/s.
+- Start 12, cap 45, regeneration 2.8/s.
 - Summon cost = `3 + (summons already made this wave)`. The counter resets at the start of each wave.
 - With no free cell in the ally area, the summon button is disabled and shows the reason.
 - +1 energy per enemy killed.
@@ -125,7 +126,7 @@ carries 0 or 1 modifier, assigned in `waves.json`.
 | `blockedColumn` | One random column's ally cells are blocked by rock for the wave |
 | `bomb` | A bomb tile appears on a random ally cell. If that cell's unit is not consumed by a merge within 12s, it explodes and destroys the units on that cell and its 4 orthogonal neighbours. Merging defuses it |
 | `fog` | Rows 0–1 are hidden, so incoming enemy types can't be scouted |
-| `rush` | Spawn interval ×0.6, total enemy count ×0.8 |
+| `rush` | Spawn interval ×0.6, total enemy count ×0.9 |
 
 ---
 
@@ -153,7 +154,10 @@ excluded from the candidate pool before drawing.
 
 ## 9. Progression and saving
 
-- A stage is 5 waves. Clearing a stage unlocks the next.
+- A stage is 5 waves. Clearing a stage unlocks the next. 10 stages, 50 waves.
+- Wave composition is generated from the `procedural` block in `waves.json`
+  rather than authored per wave — hand-written compositions were the source of
+  every difficulty cliff the Phase 5 simulator found.
 - `waveIndex` accumulates across stages — stage 3's third wave is `waveIndex 12`.
 - Saved: best cleared stage, unlocked stage, accumulated gold, the 3 permanent upgrades, sound settings.
 - Permanent upgrades (bought with gold, 3 levels each): starting lives +1 / starting energy +5 / all-tier DPS +5%.

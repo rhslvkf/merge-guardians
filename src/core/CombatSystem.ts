@@ -1,9 +1,15 @@
 import Phaser from 'phaser';
 
-import balance from '../config/balance.json';
 import { DEBUG, Depth, GRID_ROWS, Palette } from '../config/constants';
-import { Enemy, EnemyPool, SECONDS_PER_CELL } from '../entities/Enemy';
-import { PROJECTILE_ROWS_PER_SECOND, ProjectilePool } from '../entities/Projectile';
+import { Enemy, EnemyPool } from '../entities/Enemy';
+import { ProjectilePool } from '../entities/Projectile';
+import {
+  ATTACK_INTERVAL_FLOOR,
+  PROJECTILE_ROWS_PER_SECOND,
+  SECONDS_PER_CELL,
+  damagePerShot,
+  isImmuneTo,
+} from './rules';
 import type { Unit } from '../entities/Unit';
 import { t } from '../i18n';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
@@ -21,8 +27,6 @@ import type { RunState } from './RunState';
  * Everything in `update` runs over preallocated pools and index loops; nothing
  * in the frame path allocates (rule 4).
  */
-
-const ATTACK_INTERVAL_FLOOR: number = balance.units.attackIntervalFloor;
 
 /** An enemy centre this close to a shot counts as a hit, in rows. */
 const HIT_RADIUS_ROWS = 0.45;
@@ -142,7 +146,7 @@ export class CombatSystem {
       }
 
       unit.cooldown = interval;
-      const damage = unit.dps * this.run.dpsMult * interval;
+      const damage = damagePerShot(unit.dps, this.run.dpsMult, interval);
       const shot = this.projectiles.spawn(unit.col, unit.row - 0.5, damage, unit.tier, cell);
       this.layout.gridToWorld(shot.col, shot.row, this.scratchPoint);
       shot.setPosition(this.scratchPoint.x, this.scratchPoint.y);
@@ -217,7 +221,7 @@ export class CombatSystem {
     const enemy = this.enemies.active[enemyIndex];
 
     // shielded: low-tier shots land but deal nothing (spec 5).
-    if (sourceTier <= enemy.immuneToTierAtOrBelow) {
+    if (isImmuneTo(enemy.enemyType, sourceTier)) {
       this.showBlock(enemy);
       return;
     }

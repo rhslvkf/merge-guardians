@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import balance from '../config/balance.json';
+import { PROJECTILE_ROWS_PER_SECOND } from '../core/rules';
 import { tierFillColor } from './Unit';
 import { bakeTexture } from './shapeTextures';
 
@@ -18,7 +19,7 @@ import { bakeTexture } from './shapeTextures';
  * Pooled — never construct one directly outside ProjectilePool (rule 4).
  */
 
-export const PROJECTILE_ROWS_PER_SECOND: number = balance.units.projectileSpeedCells;
+export { PROJECTILE_ROWS_PER_SECOND };
 
 const RADIUS_RATIO = 0.09;
 
