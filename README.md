@@ -99,14 +99,15 @@ public/assets/
 
 ### GitHub Pages (개발 중 확인용)
 
-`main` 브랜치에 푸시하면 [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)이 빌드 후 자동 배포합니다.
+`main` 브랜치에 푸시하면 [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)이 빌드 후 자동 배포합니다. **저장소 설정을 손댈 필요는 없습니다** — `configure-pages`에 `enablement: true`를 줘서, 워크플로가 `pages: write` 권한으로 Pages 사이트를 직접 생성합니다.
 
-최초 1회만 저장소 설정이 필요합니다:
-
-1. **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 변경
-2. 이후 푸시부터 자동 배포. **Actions** 탭에서 진행 상황과 최종 URL 확인
+- 진행 상황과 배포 URL은 **Actions** 탭에서 확인
+- 수동으로 돌리려면 Actions → *Deploy to GitHub Pages* → **Run workflow**
+- 빌드는 `npm run build`(= `tsc --noEmit && vite build`)라 타입 에러가 나면 배포가 실패합니다
 
 Vite `base`가 `'./'`로 설정되어 있어 `/merge-guardians/` 같은 하위 경로에서도 에셋 경로가 깨지지 않습니다.
+
+> 워크플로는 `main` 외에 현재 스캐폴딩 브랜치에서도 트리거되도록 되어 있습니다. `main`으로 머지한 뒤에는 워크플로의 해당 브랜치 줄을 지우세요.
 
 ### 포털 제출
 
