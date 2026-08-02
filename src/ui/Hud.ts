@@ -31,6 +31,24 @@ const GAUGE_WIDTH_RATIO = 0.42;
 const BOSS_BAR_WIDTH_RATIO = 0.72;
 const BOSS_BAR_HEIGHT_RATIO = 0.11;
 
+/**
+ * Compact roster of everything taken this run, e.g. "ATK x2  DMG x1".
+ *
+ * Rebuilt only when the upgrade count changes, so it never runs per frame.
+ */
+function formatUpgrades(ids: readonly string[]): string {
+  if (ids.length === 0) return '';
+  const counts = new Map<string, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+
+  let out = '';
+  for (const [id, n] of counts) {
+    if (out.length > 0) out += '   ';
+    out += n > 1 ? `${t(`upgrade.${id}.short`)} x${n}` : t(`upgrade.${id}.short`);
+  }
+  return out;
+}
+
 export class Hud {
   private readonly energyGauge: Phaser.GameObjects.Graphics;
   private readonly energyLabel: Phaser.GameObjects.Text;
@@ -39,6 +57,7 @@ export class Hud {
   private readonly waveLabel: Phaser.GameObjects.Text;
   private readonly enemyLabel: Phaser.GameObjects.Text;
   private readonly bossBar: Phaser.GameObjects.Graphics;
+  private readonly upgradeList: Phaser.GameObjects.Text;
 
   private metrics?: LayoutMetrics;
 
@@ -48,6 +67,7 @@ export class Hud {
   private lastGold = -1;
   private lastEnemies = -1;
   private lastWaveKey = -1;
+  private lastUpgradeCount = -1;
   private bossRatio = -1;
 
   constructor(scene: Phaser.Scene) {
@@ -60,6 +80,7 @@ export class Hud {
     this.goldLabel = scene.add.text(0, 0, '', mono(Palette.goldText)).setOrigin(1, 0.5);
     this.waveLabel = scene.add.text(0, 0, '', mono(Palette.hudLabel)).setOrigin(0, 0.5);
     this.enemyLabel = scene.add.text(0, 0, '', mono(Palette.hudLabel)).setOrigin(1, 0.5);
+    this.upgradeList = scene.add.text(0, 0, '', mono(Palette.cardStack)).setOrigin(0.5, 0);
   }
 
   /** `rightInset` keeps the top-right values clear of the pause button. */
@@ -79,6 +100,11 @@ export class Hud {
     this.waveLabel.setFontSize(labelSize).setPosition(pad, bottomRow);
     this.enemyLabel.setFontSize(labelSize).setPosition(rightEdge, bottomRow);
     this.energyLabel.setFontSize(labelSize).setPosition(width / 2, topRow);
+
+    this.upgradeList
+      .setFontSize(Math.max(9, Math.round(hudH * 0.17)))
+      .setWordWrapWidth(width * 0.9)
+      .setPosition(width / 2, hudH + 2);
 
     this.redrawEnergy();
     this.redrawBossBar();
@@ -108,6 +134,12 @@ export class Hud {
       this.enemyLabel.setText(t('hud.enemiesRemaining', { n: remainingEnemies }));
     }
 
+    // Upgrades only change between waves, so compare the count.
+    if (run.upgrades.length !== this.lastUpgradeCount) {
+      this.lastUpgradeCount = run.upgrades.length;
+      this.upgradeList.setText(formatUpgrades(run.upgrades));
+    }
+
     // Key off the two numbers rather than the formatted string, so the common
     // case allocates nothing (rule 4).
     const waveKey = run.stageId * 100 + waveInStage;
@@ -129,6 +161,7 @@ export class Hud {
     this.lastGold = -1;
     this.lastEnemies = -1;
     this.lastWaveKey = -1;
+    this.lastUpgradeCount = -1;
   }
 
   private redrawEnergy(): void {

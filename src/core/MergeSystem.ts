@@ -5,6 +5,7 @@ import type { Unit } from '../entities/Unit';
 import type { CellCoord, LayoutService, WorldPoint } from '../services/LayoutService';
 import type { Grid } from './Grid';
 import type { RunState } from './RunState';
+import { MERGE_HEAL_FRACTION } from './UpgradeSystem';
 
 /**
  * Drag handling and merge rules.
@@ -53,6 +54,9 @@ export class MergeSystem {
   private readonly applyOut: DropOutcome = { kind: 'none', col: -1, row: -1, absorbed: null };
   private readonly scratchCell: CellCoord = { col: 0, row: 0 };
   private readonly scratchPoint: WorldPoint = { x: 0, y: 0 };
+
+  /** Set by GameScene so the bomb modifier can see a merge happen. */
+  onMerge?: (fromCol: number, fromRow: number, toCol: number, toRow: number) => void;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -115,6 +119,8 @@ export class MergeSystem {
         // no new unit is created. setTier refills HP, which is the heal.
         this.grid.removeUnit(fromCol, fromRow);
         outcome.absorbed?.setTier(unit.tier + 1);
+        if (this.run.mergeHeal) this.healNeighbours(col, row);
+        this.onMerge?.(fromCol, fromRow, col, row);
         break;
 
       case 'none':
@@ -122,6 +128,18 @@ export class MergeSystem {
     }
 
     return outcome;
+  }
+
+  /**
+   * `mergeHeal` upgrade: the four orthogonal neighbours recover a share of
+   * their max HP whenever a merge lands (spec 8).
+   */
+  private healNeighbours(col: number, row: number): void {
+    for (let i = 0; i < 4; i++) {
+      const neighbour = this.grid.neighbourUnit(col, row, i as 0 | 1 | 2 | 3);
+      if (!neighbour) continue;
+      neighbour.heal(neighbour.maxHp * MERGE_HEAL_FRACTION);
+    }
   }
 
   private decide(unit: Unit, col: number, row: number, out: DropOutcome): DropOutcome {

@@ -1,4 +1,5 @@
-import { GRID_COLS } from '../config/constants';
+import balance from '../config/balance.json';
+import { DEBUG, GRID_COLS } from '../config/constants';
 import wavesConfig from '../config/waves.json';
 import type { EnemyPool, EnemyType } from '../entities/Enemy';
 import type { LayoutService } from '../services/LayoutService';
@@ -44,6 +45,7 @@ interface ScheduledSpawn {
 const STAGES = wavesConfig.stages as StageConfig[];
 const WAVES_PER_STAGE: number = wavesConfig.wavesPerStage;
 export const INTER_WAVE_DELAY: number = wavesConfig.interWaveDelaySeconds;
+const RUSH = balance.modifiers.rush;
 
 /** Flat list of every wave in stage order, indexed by cumulative waveIndex. */
 const ALL_WAVES: WaveConfig[] = [];
@@ -109,16 +111,25 @@ export class WaveRunner {
 
     if (!wave) return;
 
+    // `rush` is a scheduling modifier, so it belongs here rather than in
+    // ModifierSystem: tighter spacing, fewer enemies overall (spec 7).
+    const rush = wave.modifier === 'rush';
+    const interval = wave.spawnIntervalSeconds * (rush ? RUSH.spawnIntervalMult : 1);
+    const countMult = rush ? RUSH.enemyCountMult : 1;
+
     // Building the schedule once per wave keeps the frame path allocation-free.
-    const interval = wave.spawnIntervalSeconds;
     for (const group of wave.spawns) {
-      for (let i = 0; i < group.count; i++) {
+      const count = Math.max(1, Math.round(group.count * countMult));
+      for (let i = 0; i < count; i++) {
         this.schedule.push({
           time: group.delaySeconds + i * interval,
           type: group.type as EnemyType,
           col: Math.floor(Math.random() * GRID_COLS),
         });
       }
+    }
+    if (DEBUG && rush) {
+      console.log(`[modifier] rush -> interval x${RUSH.spawnIntervalMult}, count x${RUSH.enemyCountMult}`);
     }
     this.schedule.sort((a, b) => a.time - b.time);
     this.running = true;

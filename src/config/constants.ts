@@ -59,6 +59,16 @@ export const Palette = {
   boardLine: 0x2a3346,
   boardEdge: 0x3b465e,
   mergeHighlight: 0x4ade80,
+  rockFill: 0x4b5563,
+  rockStroke: 0x6b7280,
+  fogFill: 0x8fa3c8,
+  bombFill: 0xf97316,
+  bombText: '#fed7aa',
+  cardFill: 0x1e2636,
+  cardStroke: 0x4b5b78,
+  cardTitle: '#e8ecf5',
+  cardDesc: '#9fb0cc',
+  cardStack: '#7dd3fc',
   moveHighlight: 0x60a5fa,
   unitStrokeDarken: 0.55,
   unitLabel: '#0b0d14',
@@ -108,6 +118,12 @@ export const TIER_HUE_SATURATION = 0.62;
 export const TIER_HUE_LIGHTNESS = 0.58;
 
 /**
+ * Hue offset for tier 1. Without it T1 lands on pure red, which is also the
+ * `normal` enemy colour — the two were hard to tell apart on an early board.
+ */
+export const TIER_HUE_OFFSET = 0.45;
+
+/**
  * Render order within GameScene.
  *
  * Highlight sits *above* resting units so the drop ring is not hidden by the
@@ -115,11 +131,16 @@ export const TIER_HUE_LIGHTNESS = 0.58;
  */
 export const Depth = {
   Board: 0,
+  /** Rocks sit on the board but under everything that moves. */
+  Rock: 1,
   Unit: 2,
   Enemy: 3,
   Projectile: 4,
-  Highlight: 5,
-  FloatingText: 6,
+  /** Fog hides the approach rows, so it covers enemies and shots. */
+  Fog: 5,
+  Bomb: 6,
+  Highlight: 7,
+  FloatingText: 8,
   Dragging: 10,
 } as const;
 
@@ -158,8 +179,12 @@ export const GameEvent = {
   EnemyCountChanged: 'wave:enemy-count',
   /** Payload is the boss HP ratio 0..1, or -1 when no boss is on the board. */
   BossHealthChanged: 'wave:boss-health',
+  /** Payload: the drawn cards. UIScene renders them and reports the pick. */
   UpgradeOffered: 'upgrade:offered',
+  /** Payload: the chosen upgrade id. */
   UpgradePicked: 'upgrade:picked',
+  /** Rewarded-ad stub on the draft panel: doubles the wave's gold. */
+  UpgradeAdBonus: 'upgrade:ad-bonus',
   SummonRequested: 'summon:requested',
   /** Payload: whether the summon succeeded, so the UI can react to a refusal. */
   SummonRejected: 'summon:rejected',
@@ -172,4 +197,6 @@ export const GameEvent = {
   ReviveRequested: 'run:revive-requested',
   RestartRequested: 'run:restart-requested',
   MenuRequested: 'run:menu-requested',
+  /** Payload: modifier id for the wave that is starting. */
+  ModifierChanged: 'wave:modifier',
 } as const;

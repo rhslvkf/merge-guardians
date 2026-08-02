@@ -43,8 +43,19 @@ export class RunState {
   /** Added to the summon cost per summon this wave. `summonCost` lowers it. */
   summonCostStep: number = balance.energy.summonCostStep;
 
-  /** Upgrade ids taken this run, in order (Phase 4). */
+  /** Upgrade ids taken this run, in order. Repeats mean stacks. */
   readonly upgrades: string[] = [];
+
+  /** `mergeHeal`: merging also heals the orthogonal neighbours. */
+  mergeHeal = false;
+
+  /**
+   * Free units owed at the next wave start, from `startTier`.
+   *
+   * Queued rather than placed immediately because the spec grants them "at the
+   * start of the next wave", and the draft happens between waves.
+   */
+  readonly pendingFreeUnits: { tier: number; count: number }[] = [];
 
   /** Highest tier a merge can produce. */
   readonly maxTier: number = balance.merge.maxTier;
@@ -93,7 +104,16 @@ export class RunState {
     this.energyRegen = balance.energy.regenPerSecond;
     this.summonCostStep = balance.energy.summonCostStep;
     this.upgrades.length = 0;
+    this.mergeHeal = false;
+    this.pendingFreeUnits.length = 0;
     // TODO(phase-7): apply permanent upgrades from SaveService here.
+  }
+
+  /** How many times an upgrade has been taken this run. */
+  stacksOf(id: string): number {
+    let n = 0;
+    for (let i = 0; i < this.upgrades.length; i++) if (this.upgrades[i] === id) n++;
+    return n;
   }
 
   /** Gold picked up during the stage currently in progress. */

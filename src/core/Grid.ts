@@ -20,6 +20,14 @@ export class Grid {
   /** Row-major, length GRID_COLS * GRID_ROWS. */
   private readonly cells: (Unit | null)[] = new Array(GRID_COLS * GRID_ROWS).fill(null);
 
+  /**
+   * Column sealed off by the `blockedColumn` modifier, or -1.
+   *
+   * Held here rather than in RunState because it belongs to the wave, not the
+   * run, and every placement question already goes through this class.
+   */
+  private blockedCol = -1;
+
   constructor(
     private readonly layout: LayoutService,
     private readonly run: RunState
@@ -49,10 +57,26 @@ export class Grid {
    * True when the player may place or merge on this cell.
    *
    * Reads `allyTopRow` from RunState so the `boardExpand` upgrade needs no
-   * change here (rule 6).
+   * change here (rule 6), and refuses a column the `blockedColumn` modifier has
+   * sealed off, so placement, merging and summoning all honour it for free.
    */
   isAllyCell(col: number, row: number): boolean {
+    if (!this.contains(col, row)) return false;
+    if (col === this.blockedCol) return false;
+    return row >= this.run.allyTopRow;
+  }
+
+  /** Ally area regardless of the wave modifier — used to draw the rocks. */
+  isAllyArea(col: number, row: number): boolean {
     return this.contains(col, row) && row >= this.run.allyTopRow;
+  }
+
+  get blockedColumn(): number {
+    return this.blockedCol;
+  }
+
+  setBlockedColumn(col: number): void {
+    this.blockedCol = col;
   }
 
   private index(col: number, row: number): number {
@@ -66,6 +90,13 @@ export class Grid {
 
   isFreeAllyCell(col: number, row: number): boolean {
     return this.isAllyCell(col, row) && this.cells[this.index(col, row)] === null;
+  }
+
+  /** Orthogonal neighbour of (col,row) — used by bomb blast and mergeHeal. */
+  neighbourUnit(col: number, row: number, index: 0 | 1 | 2 | 3): Unit | null {
+    const dc = index === 0 ? -1 : index === 1 ? 1 : 0;
+    const dr = index === 2 ? -1 : index === 3 ? 1 : 0;
+    return this.getUnit(col + dc, row + dr);
   }
 
   // --- mutation ----------------------------------------------------------
@@ -104,6 +135,7 @@ export class Grid {
     let count = 0;
     for (let row = this.run.allyTopRow; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
+        if (col === this.blockedCol) continue;
         if (this.cells[this.index(col, row)] === null) count++;
       }
     }
@@ -122,6 +154,7 @@ export class Grid {
 
     for (let row = this.run.allyTopRow; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
+        if (col === this.blockedCol) continue;
         if (this.cells[this.index(col, row)] !== null) continue;
         seen++;
         if (Math.random() * seen < 1) {

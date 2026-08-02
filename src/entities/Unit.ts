@@ -1,7 +1,12 @@
 import Phaser from 'phaser';
 
 import balance from '../config/balance.json';
-import { Palette, TIER_HUE_LIGHTNESS, TIER_HUE_SATURATION } from '../config/constants';
+import {
+  Palette,
+  TIER_HUE_LIGHTNESS,
+  TIER_HUE_OFFSET,
+  TIER_HUE_SATURATION,
+} from '../config/constants';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
 import { bakeTexture } from './shapeTextures';
 
@@ -24,7 +29,7 @@ const TIER_FILL: number[] = [];
 const TIER_STROKE: number[] = [];
 
 for (let tier = 1; tier <= MAX_TIER; tier++) {
-  const hue = (tier - 1) / MAX_TIER;
+  const hue = (TIER_HUE_OFFSET + (tier - 1) / MAX_TIER) % 1;
   TIER_FILL.push(
     Phaser.Display.Color.HSLToColor(hue, TIER_HUE_SATURATION, TIER_HUE_LIGHTNESS).color
   );
@@ -156,6 +161,13 @@ export class Unit extends Phaser.GameObjects.Container {
     }
     this.drawHpBar();
     return false;
+  }
+
+  /** Restore HP without exceeding the maximum. */
+  heal(amount: number): void {
+    if (this.hp <= 0 || this.hp >= this.maxHp) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.drawHpBar();
   }
 
   /** Redraw at the current cell size — called on creation and on every resize. */

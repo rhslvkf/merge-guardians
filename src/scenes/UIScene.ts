@@ -5,18 +5,19 @@ import type { EnergySystem } from '../core/EnergySystem';
 import type { RunState } from '../core/RunState';
 import { t } from '../i18n';
 import type { LayoutService } from '../services/LayoutService';
+import type { UpgradeCard } from '../core/UpgradeSystem';
+import type { WaveModifier } from '../core/WaveRunner';
 import { Button } from '../ui/Button';
 import { GameOverPanel } from '../ui/GameOverPanel';
 import { Hud } from '../ui/Hud';
+import { UpgradePanel } from '../ui/UpgradePanel';
 
 /**
- * HUD, summon dock, pause and game-over panels.
+ * HUD, summon dock, wave/modifier banners, upgrade draft, pause and game-over.
  *
  * Runs in parallel with GameScene and never touches its objects — it reads the
  * shared LayoutService and RunState and talks back through `GameEvent` only
  * (rules 6 and 7). It is never paused, so it can still drive the resume.
- *
- * Phase 4 adds the upgrade draft here.
  */
 
 const BUTTON_WIDTH_RATIO = 0.44;
@@ -25,6 +26,7 @@ const BUTTON_HEIGHT_RATIO = 0.46;
 const BANNER_SECONDS = 1.4;
 const BANNER_SIZE_RATIO = 0.055;
 const BANNER_SIZE_MAX = 54;
+const MODIFIER_BANNER_SECONDS = 1.5;
 
 export class UIScene extends Phaser.Scene {
   private layout!: LayoutService;
@@ -38,6 +40,9 @@ export class UIScene extends Phaser.Scene {
   private pauseButton!: Button;
   private banner!: Phaser.GameObjects.Text;
   private gameOverPanel!: GameOverPanel;
+  private upgradePanel!: UpgradePanel;
+  private modifierBanner!: Phaser.GameObjects.Text;
+  private modifierTimer = 0;
 
   private bannerTimer = 0;
   private remainingEnemies = 0;
@@ -82,6 +87,21 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
 
+    this.modifierBanner = this.add
+      .text(0, 0, '', {
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+        color: Palette.bannerText,
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    this.upgradePanel = new UpgradePanel(this, {
+      onPick: (id) => this.onUpgradePicked(id),
+      onAdBonus: () => this.game.events.emit(GameEvent.UpgradeAdBonus),
+    });
+
     this.gameOverPanel = new GameOverPanel(this, {
       onRevive: () => this.game.events.emit(GameEvent.ReviveRequested),
       onRestart: () => this.game.events.emit(GameEvent.RestartRequested),
@@ -103,6 +123,8 @@ export class UIScene extends Phaser.Scene {
     bus.on(GameEvent.BossHealthChanged, this.onBossHealthChanged, this);
     bus.on(GameEvent.GameOver, this.onGameOver, this);
     bus.on(GameEvent.Resumed, this.onResumed, this);
+    bus.on(GameEvent.ModifierChanged, this.onModifierChanged, this);
+    bus.on(GameEvent.UpgradeOffered, this.onUpgradeOffered, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(GameEvent.LayoutChanged, this.applyLayout, this);
@@ -112,6 +134,8 @@ export class UIScene extends Phaser.Scene {
       bus.off(GameEvent.BossHealthChanged, this.onBossHealthChanged, this);
       bus.off(GameEvent.GameOver, this.onGameOver, this);
       bus.off(GameEvent.Resumed, this.onResumed, this);
+      bus.off(GameEvent.ModifierChanged, this.onModifierChanged, this);
+      bus.off(GameEvent.UpgradeOffered, this.onUpgradeOffered, this);
       this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
     });
   }
@@ -131,6 +155,30 @@ export class UIScene extends Phaser.Scene {
     this.remainingEnemies = remaining;
   }
 
+  /** Name plus a one-line explanation, held briefly at the wave start (spec 7). */
+  private onModifierChanged(modifier: WaveModifier): void {
+    if (modifier === 'none') {
+      this.modifierBanner.setVisible(false);
+      this.modifierTimer = 0;
+      return;
+    }
+    const name = t(`modifier.${modifier}.name`);
+    this.modifierBanner.setText(`${name}\n${t(`modifier.${modifier}.desc`)}`);
+    this.modifierBanner.setVisible(true).setAlpha(1);
+    this.modifierTimer = MODIFIER_BANNER_SECONDS;
+  }
+
+  private onUpgradeOffered(offer: UpgradeCard[]): void {
+    this.isPaused = true;
+    this.upgradePanel.show(offer);
+  }
+
+  private onUpgradePicked(id: string): void {
+    this.upgradePanel.hide();
+    this.hud.invalidate();
+    this.game.events.emit(GameEvent.UpgradePicked, id);
+  }
+
   private onBossHealthChanged(ratio: number): void {
     this.hud.setBossRatio(ratio);
   }
@@ -146,12 +194,13 @@ export class UIScene extends Phaser.Scene {
     this.isPaused = false;
     this.pauseOverlay.setVisible(false);
     this.gameOverPanel.hide();
+    this.upgradePanel.hide();
     this.hud.invalidate();
   }
 
   private togglePause(): void {
-    // The game-over panel is modal: pause must not dismiss it.
-    if (this.gameOverPanel.visible) return;
+    // The game-over and draft panels are modal: pause must not dismiss them.
+    if (this.gameOverPanel.visible || this.upgradePanel.visible) return;
     this.isPaused = !this.isPaused;
     this.game.events.emit(this.isPaused ? GameEvent.PauseRequested : GameEvent.ResumeRequested);
     this.pauseOverlay.setVisible(this.isPaused);
@@ -166,6 +215,12 @@ export class UIScene extends Phaser.Scene {
 
     this.hud.refresh(this.run, this.energy?.max ?? 0, this.remainingEnemies, this.waveInStage);
     this.refreshSummonButton();
+
+    if (this.modifierTimer > 0) {
+      this.modifierTimer -= dt;
+      if (this.modifierTimer <= 0) this.modifierBanner.setVisible(false);
+      else this.modifierBanner.setAlpha(Math.min(1, this.modifierTimer / 0.4));
+    }
 
     if (this.bannerTimer > 0 && Number.isFinite(this.bannerTimer)) {
       this.bannerTimer -= dt;
@@ -233,6 +288,13 @@ export class UIScene extends Phaser.Scene {
       .setFontSize(Math.min(BANNER_SIZE_MAX, Math.round(height * BANNER_SIZE_RATIO)))
       .setPosition(width / 2, originY + (height - dockH - originY) / 2);
 
+    this.modifierBanner
+      .setFontSize(Math.min(26, Math.round(height * 0.026)))
+      // Descriptions are a full sentence, so they must wrap inside the board.
+      .setWordWrapWidth(Math.min(width * 0.86, 420))
+      .setPosition(width / 2, originY + (height - dockH - originY) / 2 + height * 0.08);
+
     this.gameOverPanel.layout(metrics);
+    this.upgradePanel.layout(metrics);
   }
 }

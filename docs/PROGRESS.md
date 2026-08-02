@@ -3,7 +3,7 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 3 complete (energy, lives, game over). Phase 4 not started.**
+Status: **Phase 4 complete (modifiers + upgrade draft). Phase 5 not started.**
 
 ---
 
@@ -81,16 +81,25 @@ reported, but none are applied yet (Phase 4).
       the gameplayStart/Stop alternation guard is enforced. Real SDK wiring and
       ad playback stay in Phase 8
 
-## Phase 4 — Modifiers and the upgrade draft
+## Phase 4 — Modifiers and the upgrade draft (done)
 
-- [ ] `blockedColumn`: rocks on one column's ally cells for the wave
-- [ ] `bomb`: 12s fuse, defused by merging, otherwise destroys the cell plus 4 neighbours
-- [ ] `fog`: rows 0–1 hidden
-- [ ] `rush`: spawn interval ×0.6, enemy count ×0.8
-- [ ] `UpgradePanel`: 3 distinct cards on wave clear
-- [ ] Candidate filtering — capped and condition-failing cards excluded
-- [ ] All 9 upgrade effects applied to `RunState` and honoured by the systems
-- [ ] Upgrades taken this run shown in the HUD side panel on wide layouts
+- [x] `blockedColumn`: rocks on one random column's ally cells. Enforced in
+      `Grid.isAllyCell`, so summoning, dropping and merging all honour it from
+      one place. Units already standing there keep fighting
+- [x] `bomb`: 12s fuse on a random occupied ally cell, defused by using that
+      unit in a merge, otherwise destroys the cell plus its 4 neighbours
+- [x] `fog`: rows 0–1 covered so incoming types cannot be read
+- [x] `rush`: spawn interval ×0.6, enemy count ×0.8, applied by WaveRunner when
+      it builds the schedule
+- [x] Modifier name and one-line description shown for 1.5s at wave start
+- [x] `UpgradePanel`: 3 distinct cards on wave clear, game paused behind it
+- [x] Candidate filtering — capped and condition-failing cards excluded
+- [x] All 9 upgrade effects applied and honoured by the systems that read them
+- [x] Upgrades taken this run listed in the HUD
+- [x] Rewarded "double gold" button on the draft (stub until Phase 8)
+
+GameScene passed 300 lines again once the draft landed, so the wave → draft →
+next wave loop and the session transitions moved to `core/RunFlow.ts`.
 
 ## Phase 5 — Balance extraction and simulator
 
