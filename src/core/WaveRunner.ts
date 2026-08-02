@@ -49,6 +49,11 @@ export const INTER_WAVE_DELAY: number = wavesConfig.interWaveDelaySeconds;
 const ALL_WAVES: WaveConfig[] = [];
 for (const stage of STAGES) for (const wave of stage.waves) ALL_WAVES.push(wave);
 
+/** True when waves.json defines the given 1-based stage. */
+export function hasStage(stageId: number): boolean {
+  return STAGES.some((stage) => stage.id === stageId);
+}
+
 export class WaveRunner {
   /** Built once per wave, then only read. */
   private schedule: ScheduledSpawn[] = [];

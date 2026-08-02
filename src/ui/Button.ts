@@ -13,6 +13,8 @@ import { t } from '../i18n';
 export interface ButtonOptions {
   labelKey: string;
   onClick: () => void;
+  /** Fill colour override, for destructive or secondary actions. */
+  fill?: number;
 }
 
 const CORNER_RADIUS_RATIO = 0.22;
@@ -23,6 +25,7 @@ export class Button extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
   private readonly hitArea = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   private readonly onClick: () => void;
+  private readonly fill: number;
 
   private buttonWidth = 0;
   private buttonHeight = 0;
@@ -32,6 +35,7 @@ export class Button extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, options: ButtonOptions) {
     super(scene, 0, 0);
     this.onClick = options.onClick;
+    this.fill = options.fill ?? Palette.buttonFill;
 
     this.background = scene.add.graphics();
     this.label = scene.add
@@ -69,6 +73,12 @@ export class Button extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Replace the visible label. Text always arrives already translated. */
+  setLabel(text: string): this {
+    this.label.setText(text);
+    return this;
+  }
+
   setEnabled(enabled: boolean): this {
     if (this.isEnabled === enabled) return this;
     this.isEnabled = enabled;
@@ -103,7 +113,7 @@ export class Button extends Phaser.GameObjects.Container {
       ? Palette.buttonFillDisabled
       : this.isPressed
         ? Palette.buttonFillPressed
-        : Palette.buttonFill;
+        : this.fill;
 
     this.background.clear();
     this.background.fillStyle(fill, 1);

@@ -3,7 +3,7 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 2 complete (enemies, combat, waves). Phase 3 not started.**
+Status: **Phase 3 complete (energy, lives, game over). Phase 4 not started.**
 
 ---
 
@@ -58,16 +58,28 @@ Status: **Phase 2 complete (enemies, combat, waves). Phase 3 not started.**
 Deliberately not in this phase: wave modifiers are read from `waves.json` and
 reported, but none are applied yet (Phase 4).
 
-## Phase 3 — Energy, lives, game over
+## Phase 3 — Energy, lives, game over (done)
 
-- [ ] `EnergySystem`: start 12 / cap 30 / +1.2 per second
-- [ ] Summon cost `3 + summonsThisWave`, counter reset each wave
-- [ ] Summon button disabled with a reason when the board is full or energy is short
-- [ ] +1 energy and +1 gold per kill
-- [ ] Life lost when an enemy crosses row 7; game over at 0
-- [ ] `RunState` as the single source of truth
-- [ ] `UIScene` split out: `Hud`, `Button`, `GameOverPanel`, events only
-- [ ] Retry from game over with no reload
+- [x] `EnergySystem`: start 12 / cap 30 / +1.2 per second, shown as a HUD gauge
+- [x] Summon cost `3 + summonsThisWave` on the button face, counter reset each wave
+- [x] Summon button disabled with the reason underneath when the board is full
+      or energy is short
+- [x] +1 energy and +1 gold per kill, with a floating label where the enemy died
+- [x] Life lost when an enemy crosses row 7, with a red flash and a camera shake;
+      game over at 0
+- [x] `RunState` as the single source of truth, created in BootScene and held in
+      the registry so it survives restart / stage change
+- [x] `UIScene` split out: `Hud`, `Button`, `GameOverPanel`, events only
+- [x] Pause on ESC or the HUD button — `scene.pause` stops update, timers and
+      tweens together, so energy and enemies both freeze
+- [x] Game over panel: revive (once per run, restores 1 life and clears the
+      board), restart, menu
+- [x] Stage clear (5 waves) routes to ResultScene with gold earned, next stage
+      and retry
+- [x] Minimal MenuScene so the "menu" exits lead somewhere real
+- [x] PortalAdapter stubs called at the right moments and logged under DEBUG;
+      the gameplayStart/Stop alternation guard is enforced. Real SDK wiring and
+      ad playback stay in Phase 8
 
 ## Phase 4 — Modifiers and the upgrade draft
 

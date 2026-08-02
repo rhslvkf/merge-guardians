@@ -1,4 +1,9 @@
+import { DEBUG } from '../../config/constants';
 import { BasePortalAdapter } from './PortalAdapter';
+
+function log(method: string): void {
+  if (DEBUG) console.log(`[portal:local] ${method}()`);
+}
 
 /**
  * Development / direct-hosting adapter.
@@ -12,16 +17,24 @@ import { BasePortalAdapter } from './PortalAdapter';
  */
 export class LocalAdapter extends BasePortalAdapter {
   async init(): Promise<void> {
-    // No SDK to boot.
+    log('init');
   }
 
-  loadingStart(): void {}
+  loadingStart(): void {
+    log('loadingStart');
+  }
 
-  loadingFinished(): void {}
+  loadingFinished(): void {
+    log('loadingFinished');
+  }
 
-  protected doGameplayStart(): void {}
+  protected doGameplayStart(): void {
+    log('gameplayStart');
+  }
 
-  protected doGameplayStop(): void {}
+  protected doGameplayStop(): void {
+    log('gameplayStop');
+  }
 
   protected async doCommercialBreak(): Promise<void> {
     // TODO(phase-8): short fake delay so pause/resume plumbing gets exercised.
@@ -41,5 +54,7 @@ export class LocalAdapter extends BasePortalAdapter {
     return null;
   }
 
-  happytime(): void {}
+  happytime(): void {
+    log('happytime');
+  }
 }

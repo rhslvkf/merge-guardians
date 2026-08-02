@@ -1,47 +1,50 @@
 import Phaser from 'phaser';
 
-import {
-  EnemyPalette,
-  GameEvent,
-  MAX_FRAME_SECONDS,
-  Palette,
-  RegistryKey,
-  SceneKey,
-} from '../config/constants';
+import { GameEvent, MAX_FRAME_SECONDS, Palette, RegistryKey, SceneKey } from '../config/constants';
+import type { EnergySystem } from '../core/EnergySystem';
+import type { RunState } from '../core/RunState';
 import { t } from '../i18n';
 import type { LayoutService } from '../services/LayoutService';
 import { Button } from '../ui/Button';
+import { GameOverPanel } from '../ui/GameOverPanel';
+import { Hud } from '../ui/Hud';
 
 /**
- * HUD, summon dock, upgrade cards, pause and game-over panels.
+ * HUD, summon dock, pause and game-over panels.
  *
  * Runs in parallel with GameScene and never touches its objects — it reads the
- * shared LayoutService and talks back through `GameEvent` only (rules 6 and 7).
+ * shared LayoutService and RunState and talks back through `GameEvent` only
+ * (rules 6 and 7). It is never paused, so it can still drive the resume.
  *
- * Phase 2 scope — the debug summon button, the wave banner and the remaining
- * enemy count. Lives, energy and gold arrive with the real HUD in Phase 3.
+ * Phase 4 adds the upgrade draft here.
  */
 
 const BUTTON_WIDTH_RATIO = 0.44;
 const BUTTON_MAX_WIDTH = 260;
-const BUTTON_HEIGHT_RATIO = 0.5;
+const BUTTON_HEIGHT_RATIO = 0.46;
 const BANNER_SECONDS = 1.4;
 const BANNER_SIZE_RATIO = 0.055;
 const BANNER_SIZE_MAX = 54;
-const COUNTER_SIZE_RATIO = 0.028;
-const COUNTER_SIZE_MAX = 22;
-const BOSS_BAR_WIDTH_RATIO = 0.72;
-const BOSS_BAR_HEIGHT_RATIO = 0.16;
 
 export class UIScene extends Phaser.Scene {
   private layout!: LayoutService;
+  private run!: RunState;
+  private energy?: EnergySystem;
+
+  private pauseOverlay!: Phaser.GameObjects.Graphics;
+  private hud!: Hud;
   private summonButton!: Button;
+  private summonHint!: Phaser.GameObjects.Text;
+  private pauseButton!: Button;
   private banner!: Phaser.GameObjects.Text;
-  private enemyCounter!: Phaser.GameObjects.Text;
-  private bossBar!: Phaser.GameObjects.Graphics;
+  private gameOverPanel!: GameOverPanel;
+
   private bannerTimer = 0;
-  /** Latest boss HP ratio, or -1 when no boss is alive. */
-  private bossRatio = -1;
+  private remainingEnemies = 0;
+  private waveInStage = 1;
+  private lastSummonCost = -1;
+  private lastHint: string | null = '';
+  private isPaused = false;
 
   constructor() {
     super({ key: SceneKey.UI, active: false });
@@ -49,10 +52,29 @@ export class UIScene extends Phaser.Scene {
 
   create(): void {
     this.layout = this.registry.get(RegistryKey.Layout) as LayoutService;
+    this.run = this.registry.get(RegistryKey.RunState) as RunState;
+    this.energy = this.registry.get(RegistryKey.EnergySystem) as EnergySystem | undefined;
+
+    // Created first: UIScene renders above GameScene, so anything here covers
+    // the board, and everything added after this stays crisp on top of it.
+    this.pauseOverlay = this.add.graphics().setVisible(false);
+
+    this.hud = new Hud(this);
+    if (this.energy) this.hud.setEnergyMax(this.energy.max);
 
     this.summonButton = new Button(this, {
-      labelKey: 'debug.summon',
+      labelKey: 'summon.label',
       onClick: () => this.game.events.emit(GameEvent.SummonRequested),
+    });
+    this.summonHint = this.add
+      .text(0, 0, '', { fontFamily: 'monospace', color: Palette.hudLabel })
+      .setOrigin(0.5)
+      .setAlpha(0.9);
+
+    this.pauseButton = new Button(this, {
+      labelKey: 'hud.pause',
+      onClick: () => this.togglePause(),
+      fill: Palette.buttonFillMuted,
     });
 
     this.banner = this.add
@@ -60,19 +82,27 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
 
-    this.enemyCounter = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', color: Palette.bannerText })
-      .setOrigin(0.5, 0.5)
-      .setAlpha(0.85);
+    this.gameOverPanel = new GameOverPanel(this, {
+      onRevive: () => this.game.events.emit(GameEvent.ReviveRequested),
+      onRestart: () => this.game.events.emit(GameEvent.RestartRequested),
+      onMenu: () => this.game.events.emit(GameEvent.MenuRequested),
+    });
 
-    this.bossBar = this.add.graphics().setVisible(false);
+    this.bindEvents();
+    this.input.keyboard?.on('keydown-ESC', this.togglePause, this);
 
+    this.applyLayout();
+  }
+
+  private bindEvents(): void {
     const bus = this.game.events;
     bus.on(GameEvent.LayoutChanged, this.applyLayout, this);
     bus.on(GameEvent.WaveStarted, this.onWaveStarted, this);
     bus.on(GameEvent.WaveCleared, this.onWaveCleared, this);
     bus.on(GameEvent.EnemyCountChanged, this.onEnemyCountChanged, this);
     bus.on(GameEvent.BossHealthChanged, this.onBossHealthChanged, this);
+    bus.on(GameEvent.GameOver, this.onGameOver, this);
+    bus.on(GameEvent.Resumed, this.onResumed, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(GameEvent.LayoutChanged, this.applyLayout, this);
@@ -80,12 +110,16 @@ export class UIScene extends Phaser.Scene {
       bus.off(GameEvent.WaveCleared, this.onWaveCleared, this);
       bus.off(GameEvent.EnemyCountChanged, this.onEnemyCountChanged, this);
       bus.off(GameEvent.BossHealthChanged, this.onBossHealthChanged, this);
+      bus.off(GameEvent.GameOver, this.onGameOver, this);
+      bus.off(GameEvent.Resumed, this.onResumed, this);
+      this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
     });
-
-    this.applyLayout();
   }
 
+  // --- events ------------------------------------------------------------
+
   private onWaveStarted(_waveIndex: number, waveInStage: number): void {
+    this.waveInStage = waveInStage;
     this.showBanner(t('wave.banner', { n: waveInStage }));
   }
 
@@ -94,78 +128,111 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onEnemyCountChanged(remaining: number): void {
-    this.enemyCounter.setText(t('hud.enemiesRemaining', { n: remaining }));
+    this.remainingEnemies = remaining;
   }
 
   private onBossHealthChanged(ratio: number): void {
-    this.bossRatio = ratio;
-    this.drawBossBar();
+    this.hud.setBossRatio(ratio);
   }
 
-  /**
-   * The boss gets its own bar across the top of the screen (spec 5), separate
-   * from the small bar every enemy carries.
-   */
-  private drawBossBar(): void {
-    this.bossBar.clear();
-    if (this.bossRatio < 0) {
-      this.bossBar.setVisible(false);
-      return;
-    }
-
-    const { width, hudH } = this.layout.get();
-    const barWidth = width * BOSS_BAR_WIDTH_RATIO;
-    const height = Math.max(6, hudH * BOSS_BAR_HEIGHT_RATIO);
-    const x = (width - barWidth) / 2;
-    const y = hudH - height * 2;
-
-    this.bossBar.setVisible(true);
-    this.bossBar.fillStyle(Palette.hpBarBack, 0.9);
-    this.bossBar.fillRect(x, y, barWidth, height);
-    this.bossBar.fillStyle(EnemyPalette.boss, 1);
-    this.bossBar.fillRect(x, y, barWidth * this.bossRatio, height);
-    this.bossBar.lineStyle(1, Palette.boardEdge, 1);
-    this.bossBar.strokeRect(x, y, barWidth, height);
+  private onGameOver(): void {
+    this.isPaused = true;
+    this.gameOverPanel.show(this.run.goldThisStage, this.run.canRevive);
+    this.gameOverPanel.layout(this.layout.get());
   }
 
-  private showBanner(text: string): void {
-    this.banner.setText(text).setVisible(true).setAlpha(1);
-    this.bannerTimer = BANNER_SECONDS;
+  /** Fired after a revive or a resume, so the panel and pause state clear. */
+  private onResumed(): void {
+    this.isPaused = false;
+    this.pauseOverlay.setVisible(false);
+    this.gameOverPanel.hide();
+    this.hud.invalidate();
   }
+
+  private togglePause(): void {
+    // The game-over panel is modal: pause must not dismiss it.
+    if (this.gameOverPanel.visible) return;
+    this.isPaused = !this.isPaused;
+    this.game.events.emit(this.isPaused ? GameEvent.PauseRequested : GameEvent.ResumeRequested);
+    this.pauseOverlay.setVisible(this.isPaused);
+    if (this.isPaused) this.showBanner(t('pause.title'), Number.POSITIVE_INFINITY);
+    else this.hideBanner();
+  }
+
+  // --- frame -------------------------------------------------------------
 
   override update(_time: number, deltaMs: number): void {
-    if (this.bannerTimer <= 0) return;
+    const dt = Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
 
-    this.bannerTimer -= Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
-    if (this.bannerTimer <= 0) {
-      this.banner.setVisible(false);
-      return;
+    this.hud.refresh(this.run, this.energy?.max ?? 0, this.remainingEnemies, this.waveInStage);
+    this.refreshSummonButton();
+
+    if (this.bannerTimer > 0 && Number.isFinite(this.bannerTimer)) {
+      this.bannerTimer -= dt;
+      if (this.bannerTimer <= 0) {
+        this.banner.setVisible(false);
+      } else {
+        // Hold, then fade over the last third.
+        this.banner.setAlpha(Math.min(1, this.bannerTimer / (BANNER_SECONDS / 3)));
+      }
     }
-    // Hold, then fade over the last third.
-    const fade = Math.min(1, this.bannerTimer / (BANNER_SECONDS / 3));
-    this.banner.setAlpha(fade);
+  }
+
+  /** Cost on the face, reason underneath when it cannot be pressed (spec 6). */
+  private refreshSummonButton(): void {
+    if (!this.energy) return;
+
+    // Compare the number, not the formatted string: t() allocates, and this
+    // runs every frame (rule 4).
+    const cost = this.energy.summonCost;
+    if (cost !== this.lastSummonCost) {
+      this.lastSummonCost = cost;
+      this.summonButton.setLabel(t('summon.label', { cost }));
+    }
+
+    const reasonKey = this.isPaused ? null : this.energy.blockedReasonKey;
+    this.summonButton.setEnabled(!this.isPaused && reasonKey === null);
+
+    if (reasonKey !== this.lastHint) {
+      this.lastHint = reasonKey;
+      this.summonHint.setText(reasonKey === null ? '' : t(reasonKey));
+    }
+  }
+
+  private showBanner(text: string, seconds = BANNER_SECONDS): void {
+    this.banner.setText(text).setVisible(true).setAlpha(1);
+    this.bannerTimer = seconds;
+  }
+
+  private hideBanner(): void {
+    this.bannerTimer = 0;
+    this.banner.setVisible(false);
   }
 
   /** Everything positions off LayoutService metrics — no literals (rule 5). */
   private applyLayout(): void {
-    const { width, height, hudH, dockH, originY } = this.layout.get();
+    const metrics = this.layout.get();
+    const { width, height, hudH, dockH, originY } = metrics;
+
+    this.pauseOverlay.clear();
+    this.pauseOverlay.fillStyle(Palette.panelBackdrop, 0.72);
+    this.pauseOverlay.fillRect(0, 0, width, height);
+
+    const pauseSize = Math.max(36, hudH * 0.34);
+    this.pauseButton.layoutAt(width - pauseSize * 0.75, hudH * 0.3, pauseSize, pauseSize);
+    this.hud.layout(metrics, pauseSize);
 
     const buttonWidth = Math.min(width * BUTTON_WIDTH_RATIO, BUTTON_MAX_WIDTH);
-    this.summonButton.layoutAt(
-      width / 2,
-      height - dockH / 2,
-      buttonWidth,
-      dockH * BUTTON_HEIGHT_RATIO
-    );
+    const buttonHeight = dockH * BUTTON_HEIGHT_RATIO;
+    this.summonButton.layoutAt(width / 2, height - dockH * 0.58, buttonWidth, buttonHeight);
+    this.summonHint
+      .setFontSize(Math.max(10, Math.round(height * 0.017)))
+      .setPosition(width / 2, height - dockH * 0.16);
 
     this.banner
       .setFontSize(Math.min(BANNER_SIZE_MAX, Math.round(height * BANNER_SIZE_RATIO)))
       .setPosition(width / 2, originY + (height - dockH - originY) / 2);
 
-    this.enemyCounter
-      .setFontSize(Math.min(COUNTER_SIZE_MAX, Math.round(height * COUNTER_SIZE_RATIO)))
-      .setPosition(width / 2, hudH / 2);
-
-    this.drawBossBar();
+    this.gameOverPanel.layout(metrics);
   }
 }

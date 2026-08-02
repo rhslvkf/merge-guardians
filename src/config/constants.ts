@@ -71,7 +71,25 @@ export const Palette = {
   hpBarEnemy: 0xf87171,
   blockText: '#cbd5f5',
   bannerText: '#e8ecf5',
+  energyFill: 0x38bdf8,
+  energyBack: 0x1e293b,
+  gaugeStroke: 0x475569,
+  lifeFull: '#f87171',
+  lifeEmpty: '#3f3f46',
+  goldText: '#fbbf24',
+  energyText: '#7dd3fc',
+  hudLabel: '#94a3b8',
+  panelBackdrop: 0x05070c,
+  panelFill: 0x151a26,
+  panelStroke: 0x3b465e,
+  buttonFillDanger: 0xdc2626,
+  buttonFillMuted: 0x475569,
 } as const;
+
+/** Screen feedback when a life is lost. */
+export const LIFE_LOST_FLASH_MS = 260;
+export const LIFE_LOST_SHAKE_MS = 220;
+export const LIFE_LOST_SHAKE_INTENSITY = 0.012;
 
 /** Placeholder enemy colours, one per type. Phase 6 replaces these with art. */
 export const EnemyPalette = {
@@ -109,6 +127,8 @@ export const Depth = {
 export const RegistryKey = {
   Layout: 'layout',
   RunState: 'runState',
+  Portal: 'portal',
+  EnergySystem: 'energySystem',
 } as const;
 
 /** Vite replaces `__DEBUG__` at build time so debug logging drops out of production. */
@@ -141,7 +161,15 @@ export const GameEvent = {
   UpgradeOffered: 'upgrade:offered',
   UpgradePicked: 'upgrade:picked',
   SummonRequested: 'summon:requested',
+  /** Payload: whether the summon succeeded, so the UI can react to a refusal. */
+  SummonRejected: 'summon:rejected',
+  LifeLost: 'run:life-lost',
   GameOver: 'run:game-over',
+  PauseRequested: 'run:pause-requested',
+  ResumeRequested: 'run:resume-requested',
   Paused: 'run:paused',
   Resumed: 'run:resumed',
+  ReviveRequested: 'run:revive-requested',
+  RestartRequested: 'run:restart-requested',
+  MenuRequested: 'run:menu-requested',
 } as const;

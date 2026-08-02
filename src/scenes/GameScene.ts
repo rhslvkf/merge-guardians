@@ -3,15 +3,16 @@ import Phaser from 'phaser';
 import {
   DEBUG,
   Depth,
-  GRID_COLS,
-  GRID_ROWS,
   GameEvent,
+  LIFE_LOST_FLASH_MS,
+  LIFE_LOST_SHAKE_INTENSITY,
+  LIFE_LOST_SHAKE_MS,
   MAX_FRAME_SECONDS,
-  Palette,
   RegistryKey,
   SceneKey,
 } from '../config/constants';
 import { CombatSystem } from '../core/CombatSystem';
+import { EnergySystem } from '../core/EnergySystem';
 import { Grid } from '../core/Grid';
 import { MergeSystem } from '../core/MergeSystem';
 import { RunState } from '../core/RunState';
@@ -19,7 +20,10 @@ import { INTER_WAVE_DELAY, WaveRunner } from '../core/WaveRunner';
 import { EnemyPool } from '../entities/Enemy';
 import { ProjectilePool } from '../entities/Projectile';
 import { Unit } from '../entities/Unit';
-import { LayoutService, type CellCoord, type WorldPoint } from '../services/LayoutService';
+import type { PortalAdapter } from '../services/portal/PortalAdapter';
+import { LayoutService, type CellCoord } from '../services/LayoutService';
+import { BoardRenderer } from '../ui/BoardRenderer';
+import balance from '../config/balance.json';
 
 /**
  * Gameplay only: board, units, enemies, projectiles.
@@ -28,43 +32,49 @@ import { LayoutService, type CellCoord, type WorldPoint } from '../services/Layo
  * the events in `GameEvent` (rule 7). Drag handling lives in MergeSystem and
  * combat in CombatSystem; this scene wires them together and draws the board.
  *
- * Phase 2 scope — combat and waves. Energy cost and lives arrive in Phase 3,
- * wave modifiers and the upgrade draft in Phase 4.
+ * Pausing uses `scene.pause`, which halts this scene's update, timers and
+ * tweens in one step. UIScene is never paused, so it can still drive the resume.
+ *
+ * Phase 4 adds wave modifiers and the upgrade draft.
  */
+
+const REVIVE_LIVES: number = balance.ads.reviveLifeRestored;
 
 export class GameScene extends Phaser.Scene {
   private layout!: LayoutService;
   private run!: RunState;
+  private portal?: PortalAdapter;
   private grid!: Grid;
   private mergeSystem!: MergeSystem;
+  private energy!: EnergySystem;
   private combat!: CombatSystem;
   private waves!: WaveRunner;
   private enemies!: EnemyPool;
   private projectiles!: ProjectilePool;
 
-  private boardGfx!: Phaser.GameObjects.Graphics;
+  private board!: BoardRenderer;
 
   /** 'wave' while a wave runs, 'between' during the gap before the next one. */
-  private phase: 'wave' | 'between' = 'wave';
+  private phase: 'wave' | 'between' | 'over' = 'wave';
   private betweenTimer = 0;
   private lastReportedRemaining = -1;
   private lastReportedBossHp = -1;
 
   private readonly scratchCell: CellCoord = { col: 0, row: 0 };
-  private readonly scratchPoint: WorldPoint = { x: 0, y: 0 };
 
   constructor() {
     super(SceneKey.Game);
   }
 
   create(): void {
-    this.layout = new LayoutService();
-    this.run = new RunState();
-    this.run.reset();
-    this.grid = new Grid(this.layout, this.run);
+    this.layout = this.registry.get(RegistryKey.Layout) as LayoutService;
+    this.run = this.registry.get(RegistryKey.RunState) as RunState;
+    this.portal = this.registry.get(RegistryKey.Portal) as PortalAdapter | undefined;
 
+    this.grid = new Grid(this.layout, this.run);
     this.enemies = new EnemyPool(this);
     this.projectiles = new ProjectilePool(this);
+    this.energy = new EnergySystem(this.run, this.grid);
     this.mergeSystem = new MergeSystem(this, this.grid, this.run, this.layout);
     this.combat = new CombatSystem(
       this,
@@ -72,19 +82,19 @@ export class GameScene extends Phaser.Scene {
       this.run,
       this.layout,
       this.enemies,
-      this.projectiles
+      this.projectiles,
+      this.energy
     );
     this.waves = new WaveRunner(this.run, this.layout, this.enemies);
 
     // UIScene reads these rather than holding copies of its own (rules 6 and 7).
-    this.registry.set(RegistryKey.Layout, this.layout);
-    this.registry.set(RegistryKey.RunState, this.run);
+    this.registry.set(RegistryKey.EnergySystem, this.energy);
 
-    this.boardGfx = this.add.graphics().setDepth(Depth.Board);
+    this.board = new BoardRenderer(this, this.layout, this.grid, this.run);
 
     this.mergeSystem.attachInput();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-    this.game.events.on(GameEvent.SummonRequested, this.summonUnit, this);
+    this.bindEvents();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.teardown, this);
 
     this.handleResize();
@@ -95,13 +105,52 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(0, this.startCurrentWave, undefined, this);
   }
 
+  private bindEvents(): void {
+    const bus = this.game.events;
+    bus.on(GameEvent.SummonRequested, this.summonUnit, this);
+    bus.on(GameEvent.PauseRequested, this.pauseGame, this);
+    bus.on(GameEvent.ResumeRequested, this.resumeGame, this);
+    bus.on(GameEvent.ReviveRequested, this.revive, this);
+    bus.on(GameEvent.RestartRequested, this.restartRun, this);
+    bus.on(GameEvent.MenuRequested, this.goToMenu, this);
+  }
+
   private teardown(): void {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-    this.game.events.off(GameEvent.SummonRequested, this.summonUnit, this);
+    const bus = this.game.events;
+    bus.off(GameEvent.SummonRequested, this.summonUnit, this);
+    bus.off(GameEvent.PauseRequested, this.pauseGame, this);
+    bus.off(GameEvent.ResumeRequested, this.resumeGame, this);
+    bus.off(GameEvent.ReviveRequested, this.revive, this);
+    bus.off(GameEvent.RestartRequested, this.restartRun, this);
+    bus.off(GameEvent.MenuRequested, this.goToMenu, this);
     this.mergeSystem.detachInput();
   }
 
-  // --- waves -------------------------------------------------------------
+  // --- pause -------------------------------------------------------------
+
+  /**
+   * `scene.pause` stops update, this scene's timers and its tweens together,
+   * which is what keeps energy from regenerating behind the pause overlay.
+   */
+  private pauseGame(): void {
+    if (this.scene.isPaused(SceneKey.Game)) return;
+    // TODO(phase-8): this is where gameplayStop() must fire for Poki.
+    this.portal?.gameplayStop();
+    this.scene.pause();
+    this.game.events.emit(GameEvent.Paused);
+  }
+
+  private resumeGame(): void {
+    if (!this.scene.isPaused(SceneKey.Game)) return;
+    this.scene.resume();
+    // TODO(phase-8): commercialBreak() belongs here — only when returning to
+    // gameplay from pause, never on the way out to the menu.
+    this.portal?.gameplayStart();
+    this.game.events.emit(GameEvent.Resumed);
+  }
+
+  // --- run flow ----------------------------------------------------------
 
   private startCurrentWave(): void {
     if (!this.waves.hasWaveForCurrentIndex) {
@@ -109,9 +158,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.run.summonsThisWave = 0;
     this.waves.startWave();
     this.phase = 'wave';
     this.lastReportedRemaining = -1;
+    // TODO(phase-8): Poki requires this on the player's *first input*, not on
+    // wave start. Placed here for now so the start/stop pair alternates.
+    this.portal?.gameplayStart();
 
     this.game.events.emit(
       GameEvent.WaveStarted,
@@ -124,11 +177,79 @@ export class GameScene extends Phaser.Scene {
 
   private onWaveCleared(): void {
     this.waves.stop();
-    this.phase = 'between';
-    this.betweenTimer = INTER_WAVE_DELAY;
     this.projectiles.releaseAll();
     this.game.events.emit(GameEvent.WaveCleared, this.run.waveIndex);
+
+    if (RunState.isLastWaveOfStage(this.run.waveIndex)) {
+      this.onStageCleared();
+      return;
+    }
+
+    this.phase = 'between';
+    this.betweenTimer = INTER_WAVE_DELAY;
     // Phase 4 inserts the 3-card upgrade draft here.
+  }
+
+  private onStageCleared(): void {
+    this.phase = 'over';
+    // TODO(phase-8): gameplayStop() first, then the end-of-stage midroll.
+    this.portal?.gameplayStop();
+    this.game.events.emit(GameEvent.StageCleared, this.run.stageId);
+    this.scene.stop(SceneKey.UI);
+    this.scene.start(SceneKey.Result);
+  }
+
+  private onLifeLost(count: number): void {
+    this.run.lives = Math.max(0, this.run.lives - count);
+    this.cameras.main.flash(LIFE_LOST_FLASH_MS, 180, 30, 30);
+    this.cameras.main.shake(LIFE_LOST_SHAKE_MS, LIFE_LOST_SHAKE_INTENSITY);
+    this.game.events.emit(GameEvent.LifeLost, this.run.lives);
+    if (this.run.lives <= 0) this.onGameOver();
+  }
+
+  private onGameOver(): void {
+    this.phase = 'over';
+    this.portal?.gameplayStop();
+    this.game.events.emit(GameEvent.GameOver, this.run.goldThisStage);
+    this.scene.pause();
+  }
+
+  /**
+   * Rewarded revive: one life back, board wiped, straight back into the wave.
+   *
+   * Phase 8 puts `PortalAdapter.rewardedBreak()` in front of this and only
+   * grants it when the ad reports success.
+   */
+  private revive(): void {
+    if (!this.run.canRevive) return;
+    if (DEBUG) console.log('[ads] revive requested (rewardedBreak stub)');
+
+    this.run.revivesUsed += 1;
+    this.run.lives = REVIVE_LIVES;
+    this.enemies.releaseAll();
+    this.projectiles.releaseAll();
+    this.combat.clearLabels();
+    this.lastReportedBossHp = -1;
+
+    this.phase = this.waves.isRunning ? 'wave' : 'between';
+    this.scene.resume();
+    this.portal?.gameplayStart();
+    this.game.events.emit(GameEvent.Resumed);
+  }
+
+  private restartRun(): void {
+    this.run.startStage(this.run.stageId);
+    this.scene.stop(SceneKey.UI);
+    this.scene.resume();
+    this.scene.restart();
+  }
+
+  private goToMenu(): void {
+    // TODO(phase-8): no commercialBreak() on the way out to the menu — that is
+    // an instant Poki rejection.
+    this.scene.stop(SceneKey.UI);
+    this.scene.resume();
+    this.scene.start(SceneKey.Menu);
   }
 
   // --- layout ------------------------------------------------------------
@@ -141,7 +262,7 @@ export class GameScene extends Phaser.Scene {
 
     const metrics = this.layout.resize(width, height, cssScale);
 
-    this.drawBoard();
+    this.board.redraw();
     this.grid.forEachUnit((unit) => {
       unit.redraw(metrics.cell);
       unit.snapToGrid(this.layout);
@@ -151,51 +272,16 @@ export class GameScene extends Phaser.Scene {
     this.game.events.emit(GameEvent.LayoutChanged);
   }
 
-  private drawBoard(): void {
-    const { cell, originX, originY, gridW, gridH } = this.layout.get();
-    const gfx = this.boardGfx;
-
-    gfx.clear();
-    if (cell <= 0) return;
-
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
-        const ally = this.grid.isAllyCell(col, row);
-        this.layout.cellTopLeft(col, row, this.scratchPoint);
-        gfx.fillStyle(ally ? Palette.boardAllyArea : Palette.boardEnemyArea, 1);
-        gfx.fillRect(this.scratchPoint.x, this.scratchPoint.y, cell, cell);
-      }
-    }
-
-    gfx.lineStyle(1, Palette.boardLine, 1);
-    for (let col = 0; col <= GRID_COLS; col++) {
-      const x = originX + col * cell;
-      gfx.lineBetween(x, originY, x, originY + gridH);
-    }
-    for (let row = 0; row <= GRID_ROWS; row++) {
-      const y = originY + row * cell;
-      gfx.lineBetween(originX, y, originX + gridW, y);
-    }
-
-    // Emphasise the board edge and the line the player may not build past.
-    gfx.lineStyle(2, Palette.boardEdge, 1);
-    gfx.strokeRect(originX, originY, gridW, gridH);
-    const allyY = originY + this.run.allyTopRow * cell;
-    gfx.lineBetween(originX, allyY, originX + gridW, allyY);
-  }
-
   // --- summoning ---------------------------------------------------------
 
-  /**
-   * Debug summon: free T1 on a random empty ally cell.
-   *
-   * Phase 3 puts this behind the energy cost from balance.json.
-   */
+  /** Costs energy and needs a free cell — EnergySystem owns both checks. */
   private summonUnit(): void {
-    if (!this.grid.randomFreeAllyCell(this.scratchCell)) {
-      if (DEBUG) console.warn('[summon] ally area is full');
+    if (this.phase === 'over') return;
+    if (!this.energy.trySpendForSummon()) {
+      this.game.events.emit(GameEvent.SummonRejected, this.energy.blockedReasonKey);
       return;
     }
+    if (!this.grid.randomFreeAllyCell(this.scratchCell)) return;
 
     const unit = new Unit(this, 1);
     unit.setDepth(Depth.Unit).redraw(this.layout.get().cell);
@@ -209,9 +295,15 @@ export class GameScene extends Phaser.Scene {
     // Clamped so a backgrounded tab does not teleport enemies on return.
     const dt = Math.min(deltaMs / 1000, MAX_FRAME_SECONDS);
 
+    if (this.phase === 'over') return;
+
+    this.energy.update(dt);
+
     if (this.phase === 'wave') {
       this.waves.update(dt);
       this.combat.update(dt);
+      if (this.combat.leaksThisFrame > 0) this.onLifeLost(this.combat.leaksThisFrame);
+      if (this.phase !== 'wave') return;
       if (this.waves.isWaveCleared()) this.onWaveCleared();
     } else {
       this.combat.update(dt);

@@ -7,6 +7,8 @@ import { PROJECTILE_ROWS_PER_SECOND, ProjectilePool } from '../entities/Projecti
 import type { Unit } from '../entities/Unit';
 import { t } from '../i18n';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
+import { FLOATING_TEXT_RISE_RATIO, FloatingTextPool } from '../ui/FloatingText';
+import type { EnergySystem } from './EnergySystem';
 import type { Grid } from './Grid';
 import type { RunState } from './RunState';
 
@@ -28,19 +30,12 @@ const HIT_RADIUS_ROWS = 0.45;
 /** Enemy centre at this row has reached the bottom edge of the board. */
 const LEAK_ROW = GRID_ROWS - 0.5;
 
-const BLOCK_TEXT_POOL_SIZE = 8;
-const BLOCK_TEXT_LIFETIME = 0.6;
-const BLOCK_TEXT_RISE_RATIO = 0.5;
-
-interface BlockLabel {
-  text: Phaser.GameObjects.Text;
-  life: number;
-  startY: number;
-}
+const LABEL_POOL_SIZE = 16;
+const LABEL_SIZE_RATIO = 0.26;
 
 export class CombatSystem {
-  /** Reused label pool so a blocked hit allocates nothing mid-frame. */
-  private readonly blockLabels: BlockLabel[] = [];
+  /** Reused label pool so a hit or a reward allocates nothing mid-frame. */
+  private readonly labels: FloatingTextPool;
   private readonly scratchPoint: WorldPoint = { x: 0, y: 0 };
 
   /** Kills this frame, drained by GameScene for rewards (Phase 3). */
@@ -56,20 +51,10 @@ export class CombatSystem {
     private readonly run: RunState,
     private readonly layout: LayoutService,
     private readonly enemies: EnemyPool,
-    private readonly projectiles: ProjectilePool
+    private readonly projectiles: ProjectilePool,
+    private readonly energy: EnergySystem
   ) {
-    for (let i = 0; i < BLOCK_TEXT_POOL_SIZE; i++) {
-      const text = scene.add
-        .text(0, 0, t('combat.block'), {
-          fontFamily: 'monospace',
-          fontStyle: 'bold',
-          color: Palette.blockText,
-        })
-        .setOrigin(0.5)
-        .setDepth(Depth.FloatingText)
-        .setVisible(false);
-      this.blockLabels.push({ text, life: 0, startY: 0 });
-    }
+    this.labels = new FloatingTextPool(scene, LABEL_POOL_SIZE);
   }
 
   update(dt: number): void {
@@ -79,7 +64,7 @@ export class CombatSystem {
     this.advanceEnemies(dt);
     this.fireUnits(dt);
     this.advanceProjectiles(dt);
-    this.updateBlockLabels(dt);
+    this.labels.update(dt, this.layout.get().cell * FLOATING_TEXT_RISE_RATIO);
   }
 
   onResize(cell: number): void {
@@ -87,9 +72,7 @@ export class CombatSystem {
     for (let i = 0; i < this.projectiles.active.length; i++) {
       this.projectiles.active[i].redraw(cell);
     }
-    for (let i = 0; i < this.blockLabels.length; i++) {
-      this.blockLabels[i].text.setFontSize(Math.max(9, Math.round(cell * 0.26)));
-    }
+    this.labels.setFontSize(Math.max(9, Math.round(cell * LABEL_SIZE_RATIO)));
   }
 
   // --- enemies -----------------------------------------------------------
@@ -241,40 +224,30 @@ export class CombatSystem {
 
     if (enemy.takeDamage(damage)) {
       this.killsThisFrame++;
+      this.grantKillReward(enemy);
       this.enemies.releaseAt(enemyIndex);
     }
   }
 
-  // --- BLOCK labels ------------------------------------------------------
-
-  private showBlock(enemy: Enemy): void {
-    for (let i = 0; i < this.blockLabels.length; i++) {
-      const label = this.blockLabels[i];
-      if (label.life > 0) continue;
-      label.life = BLOCK_TEXT_LIFETIME;
-      label.startY = enemy.y;
-      label.text.setPosition(enemy.x, enemy.y).setAlpha(1).setVisible(true);
-      return;
-    }
-    // Pool exhausted: skip the label rather than allocate mid-frame.
+  /** +1 energy and +1 gold per kill (spec 5), shown where the enemy died. */
+  private grantKillReward(enemy: Enemy): void {
+    this.energy.grantKillReward();
+    this.labels.show(
+      t('reward.kill', { energy: this.energy.energyPerKill, gold: this.energy.goldPerKill }),
+      enemy.x,
+      enemy.y,
+      Palette.goldText
+    );
   }
 
-  private updateBlockLabels(dt: number): void {
-    const rise = this.layout.get().cell * BLOCK_TEXT_RISE_RATIO;
+  // --- labels ------------------------------------------------------------
 
-    for (let i = 0; i < this.blockLabels.length; i++) {
-      const label = this.blockLabels[i];
-      if (label.life <= 0) continue;
+  private showBlock(enemy: Enemy): void {
+    this.labels.show(t('combat.block'), enemy.x, enemy.y, Palette.blockText);
+  }
 
-      label.life -= dt;
-      if (label.life <= 0) {
-        label.text.setVisible(false);
-        continue;
-      }
-
-      const progress = 1 - label.life / BLOCK_TEXT_LIFETIME;
-      label.text.y = label.startY - rise * progress;
-      label.text.setAlpha(1 - progress);
-    }
+  /** Drop every live label — used when a revive wipes the board. */
+  clearLabels(): void {
+    this.labels.clear();
   }
 }

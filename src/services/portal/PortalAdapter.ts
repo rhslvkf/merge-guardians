@@ -48,12 +48,23 @@ export abstract class BasePortalAdapter implements PortalAdapter {
   protected abstract doCommercialBreak(): Promise<void>;
   protected abstract doRewardedBreak(): Promise<boolean>;
 
+  /**
+   * Poki rejects a game that fires either event twice in a row, so the
+   * alternation is enforced here once rather than in each adapter.
+   *
+   * The ad-in-progress suppression is wired in Phase 8, when there is a real ad
+   * to be in the middle of.
+   */
   gameplayStart(): void {
-    // TODO(phase-8): ignore when adInProgress or already active, then delegate.
+    if (this.adInProgress || this.gameplayActive) return;
+    this.gameplayActive = true;
+    this.doGameplayStart();
   }
 
   gameplayStop(): void {
-    // TODO(phase-8): ignore when adInProgress or already stopped, then delegate.
+    if (this.adInProgress || !this.gameplayActive) return;
+    this.gameplayActive = false;
+    this.doGameplayStop();
   }
 
   async commercialBreak(): Promise<void> {

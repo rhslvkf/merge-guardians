@@ -4,8 +4,8 @@
 
 **▶ [플레이 (GitHub Pages)](https://rhslvkf.github.io/merge-guardians/)**
 
-> 현재 상태: **Phase 2 (적 · 전투 · 웨이브)**. SUMMON으로 유닛을 만들어 드래그로 합성하고,
-> 웨이브가 진행되며 유닛이 자동 사격합니다. 에너지 비용과 라이프는 Phase 3에서 붙습니다.
+> 현재 상태: **Phase 3 (에너지 · 라이프 · 게임오버)**. 스테이지 1을 처음부터 클리어하거나
+> 게임오버까지 갈 수 있습니다. 3택 업그레이드와 웨이브 모디파이어는 Phase 4에서 붙습니다.
 > 진행 상황은 [docs/PROGRESS.md](docs/PROGRESS.md)를 참고하세요.
 
 ---

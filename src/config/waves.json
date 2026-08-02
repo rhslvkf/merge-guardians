@@ -30,12 +30,13 @@
           ]
         },
         {
+          "$note": "No shielded in stage 1: it takes zero damage from tier <= 3, and a player three waves in cannot field a T4 without giving up column coverage. Shielded debuts in stage 2.",
           "waveIndex": 2,
           "modifier": "blockedColumn",
           "spawnIntervalSeconds": 1.9,
           "spawns": [
             { "type": "normal", "count": 8, "delaySeconds": 0 },
-            { "type": "shielded", "count": 3, "delaySeconds": 5 }
+            { "type": "flyer", "count": 3, "delaySeconds": 5 }
           ]
         },
         {

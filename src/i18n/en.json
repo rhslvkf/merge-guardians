@@ -1,9 +1,40 @@
 {
-  "debug.summon": "SUMMON",
-  "summon.blocked.boardFull": "Board full",
+  "game.title": "MERGE GUARDIANS",
+  "menu.play": "PLAY",
+  "menu.hint": "Merge your guardians. Hold the line.",
+
+  "summon.label": "SUMMON  {cost}",
+  "summon.blocked.boardFull": "No free space",
   "summon.blocked.energy": "Not enough energy",
+
   "combat.block": "BLOCK",
+  "reward.kill": "+{energy}⚡ +{gold}◆",
+
   "wave.banner": "WAVE {n}",
   "wave.cleared": "WAVE CLEAR",
-  "hud.enemiesRemaining": "ENEMIES {n}"
+
+  "hud.energy": "{n}/{max}",
+  "hud.lives": "♥ {n}",
+  "hud.gold": "◆ {n}",
+  "hud.wave": "STAGE {stage} - WAVE {wave}",
+  "hud.enemiesRemaining": "ENEMIES {n}",
+  "hud.pause": "II",
+
+  "pause.title": "PAUSED",
+  "pause.resume": "RESUME",
+  "pause.menu": "QUIT TO MENU",
+
+  "gameOver.title": "GAME OVER",
+  "gameOver.goldEarned": "Gold earned: {n}",
+  "gameOver.revive": "REVIVE (AD)",
+  "gameOver.restart": "RESTART",
+  "gameOver.menu": "MENU",
+
+  "result.title": "STAGE {n} CLEAR",
+  "result.goldEarned": "Gold earned: {n}",
+  "result.goldTotal": "Total gold: {n}",
+  "result.next": "NEXT STAGE",
+  "result.retry": "RETRY STAGE",
+  "result.menu": "MENU",
+  "result.allClear": "All stages cleared!"
 }
