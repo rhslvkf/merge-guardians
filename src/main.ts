@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { DEBUG } from './config/constants';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MenuScene } from './scenes/MenuScene';
@@ -28,5 +29,11 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
+
+if (DEBUG) {
+  // Handle for manual poking and for browser-driven checks. Dropped from
+  // production builds along with everything else behind DEBUG (rule 9).
+  (window as unknown as Record<string, unknown>).__MERGE_GUARDIANS__ = game;
+}
 
 export default game;

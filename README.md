@@ -4,7 +4,8 @@
 
 **▶ [플레이 (GitHub Pages)](https://rhslvkf.github.io/merge-guardians/)**
 
-> 현재 상태: **Phase 0 (스캐폴딩 완료)**. 아직 게임플레이가 없습니다 — 검은 화면에 타이틀만 표시됩니다.
+> 현재 상태: **Phase 1 (그리드 + 드래그 합성)**. 적과 전투는 아직 없습니다.
+> SUMMON 버튼으로 T1 유닛을 만들고 드래그해 합성하는 것까지 동작합니다.
 > 진행 상황은 [docs/PROGRESS.md](docs/PROGRESS.md)를 참고하세요.
 
 ---
@@ -62,6 +63,7 @@ Node 22 기준으로 개발 중입니다.
 ```
 src/
   config/     balance.json, waves.json, upgrades.json, constants.ts
+  i18n/       en.json + t() — 모든 표시 문자열은 키로 접근
   core/       Grid, MergeSystem, CombatSystem, WaveRunner, EnergySystem, RunState
   entities/   Unit, Enemy, Projectile
   scenes/     Boot, Preload, Menu, Game, UI, Result

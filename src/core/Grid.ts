@@ -1,42 +1,151 @@
+import { GRID_COLS, GRID_ROWS } from '../config/constants';
+import type { Unit } from '../entities/Unit';
+import type { CellCoord, LayoutService, WorldPoint } from '../services/LayoutService';
+import type { RunState } from './RunState';
+
 /**
  * Board state: what occupies each cell, which cells the player may use, and
  * free-cell lookup for summoning.
  *
- * Grid holds *logical* cells only. Screen positions come from LayoutService
- * (rule 5); this file never sees a pixel.
- *
- * Stub — implemented in Phase 1.
+ * Grid holds *logical* cells; the pixel maths lives in LayoutService (rule 5).
+ * The coordinate helpers here are thin delegates so entities only need a Grid
+ * reference to place themselves.
  */
 
 export type CellContent = 'empty' | 'unit' | 'rock' | 'bomb';
 
-export interface CellCoord {
-  col: number;
-  row: number;
-}
+export type { CellCoord };
 
 export class Grid {
-  /** True when (col,row) is inside the board. */
-  contains(_col: number, _row: number): boolean {
-    // TODO(phase-1)
-    return false;
+  /** Row-major, length GRID_COLS * GRID_ROWS. */
+  private readonly cells: (Unit | null)[] = new Array(GRID_COLS * GRID_ROWS).fill(null);
+
+  constructor(
+    private readonly layout: LayoutService,
+    private readonly run: RunState
+  ) {}
+
+  // --- coordinates -------------------------------------------------------
+
+  gridToWorld(col: number, row: number, out?: WorldPoint): WorldPoint {
+    return this.layout.gridToWorld(col, row, out);
   }
 
-  /** True when the player may place or merge on this cell right now. */
-  isAllyCell(_col: number, _row: number): boolean {
-    // TODO(phase-1): respects the boardExpand upgrade and blockedColumn rocks.
-    return false;
+  worldToGrid(x: number, y: number, out: CellCoord): boolean {
+    return this.layout.worldToGrid(x, y, out);
   }
 
-  /** A random free ally cell, or null when the board is full. */
-  randomFreeAllyCell(): CellCoord | null {
-    // TODO(phase-1)
-    return null;
+  get cellSize(): number {
+    return this.layout.get().cell;
   }
 
-  /** Free ally cell count — drives the "board full" summon lockout. */
+  // --- cell queries ------------------------------------------------------
+
+  contains(col: number, row: number): boolean {
+    return col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS;
+  }
+
+  /**
+   * True when the player may place or merge on this cell.
+   *
+   * Reads `allyTopRow` from RunState so the `boardExpand` upgrade needs no
+   * change here (rule 6).
+   */
+  isAllyCell(col: number, row: number): boolean {
+    return this.contains(col, row) && row >= this.run.allyTopRow;
+  }
+
+  private index(col: number, row: number): number {
+    return row * GRID_COLS + col;
+  }
+
+  getUnit(col: number, row: number): Unit | null {
+    if (!this.contains(col, row)) return null;
+    return this.cells[this.index(col, row)];
+  }
+
+  isFreeAllyCell(col: number, row: number): boolean {
+    return this.isAllyCell(col, row) && this.cells[this.index(col, row)] === null;
+  }
+
+  // --- mutation ----------------------------------------------------------
+
+  /** Place (or clear, with null) a unit and keep its own col/row in sync. */
+  setUnit(col: number, row: number, unit: Unit | null): void {
+    if (!this.contains(col, row)) return;
+    this.cells[this.index(col, row)] = unit;
+    if (unit) {
+      unit.col = col;
+      unit.row = row;
+    }
+  }
+
+  moveUnit(fromCol: number, fromRow: number, toCol: number, toRow: number): void {
+    const unit = this.getUnit(fromCol, fromRow);
+    if (!unit) return;
+    this.setUnit(fromCol, fromRow, null);
+    this.setUnit(toCol, toRow, unit);
+  }
+
+  swapUnits(aCol: number, aRow: number, bCol: number, bRow: number): void {
+    const a = this.getUnit(aCol, aRow);
+    const b = this.getUnit(bCol, bRow);
+    this.setUnit(aCol, aRow, b);
+    this.setUnit(bCol, bRow, a);
+  }
+
+  removeUnit(col: number, row: number): void {
+    this.setUnit(col, row, null);
+  }
+
+  // --- searches ----------------------------------------------------------
+
   freeAllyCellCount(): number {
-    // TODO(phase-1)
-    return 0;
+    let count = 0;
+    for (let row = this.run.allyTopRow; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        if (this.cells[this.index(col, row)] === null) count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * A uniformly random free ally cell, or null when the area is full.
+   *
+   * Reservoir sampling, so no candidate array is allocated (rule 4).
+   */
+  randomFreeAllyCell(out: CellCoord): boolean {
+    let seen = 0;
+    let chosenCol = -1;
+    let chosenRow = -1;
+
+    for (let row = this.run.allyTopRow; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        if (this.cells[this.index(col, row)] !== null) continue;
+        seen++;
+        if (Math.random() * seen < 1) {
+          chosenCol = col;
+          chosenRow = row;
+        }
+      }
+    }
+
+    if (seen === 0) return false;
+    out.col = chosenCol;
+    out.row = chosenRow;
+    return true;
+  }
+
+  /** Visit every occupied cell — used to reposition units after a resize. */
+  forEachUnit(callback: (unit: Unit) => void): void {
+    for (let i = 0; i < this.cells.length; i++) {
+      const unit = this.cells[i];
+      if (unit) callback(unit);
+    }
+  }
+
+  clear(): void {
+    this.cells.fill(null);
   }
 }

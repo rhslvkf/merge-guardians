@@ -39,6 +39,54 @@ export const MIN_TOUCH_CELL_PX = 44;
 /** Above this width/height ratio we have room for the side HUD panels. */
 export const WIDE_LAYOUT_ASPECT = 1.2;
 
+/** Pointer travel before a press turns into a drag rather than a tap. */
+export const DRAG_THRESHOLD_PX = 8;
+
+/**
+ * Presentation palette. Placeholder art only — Phase 6 replaces the drawn
+ * shapes with sprites. These are colours, not balance, so they stay in code.
+ */
+export const Palette = {
+  boardEnemyArea: 0x151a26,
+  boardAllyArea: 0x1e2636,
+  boardLine: 0x2a3346,
+  boardEdge: 0x3b465e,
+  mergeHighlight: 0x4ade80,
+  moveHighlight: 0x60a5fa,
+  unitStrokeDarken: 0.55,
+  unitLabel: '#0b0d14',
+  buttonFill: 0x3b82f6,
+  buttonFillPressed: 0x2563eb,
+  buttonFillDisabled: 0x374151,
+  buttonLabel: '#f8fafc',
+} as const;
+
+/**
+ * Tier colour = an even slice of the HSL wheel, so T1..T8 stay distinguishable
+ * at cell size without an art pass.
+ */
+export const TIER_HUE_SATURATION = 0.62;
+export const TIER_HUE_LIGHTNESS = 0.58;
+
+/**
+ * Render order within GameScene.
+ *
+ * Highlight sits *above* resting units so the drop ring is not hidden by the
+ * unit being dropped on, and below the dragged unit so the drag stays on top.
+ */
+export const Depth = {
+  Board: 0,
+  Unit: 2,
+  Highlight: 5,
+  Dragging: 10,
+} as const;
+
+/** Shared registry keys, so scenes never reach for each other's fields. */
+export const RegistryKey = {
+  Layout: 'layout',
+  RunState: 'runState',
+} as const;
+
 /** Vite replaces `__DEBUG__` at build time so debug logging drops out of production. */
 declare const __DEBUG__: boolean;
 export const DEBUG: boolean = typeof __DEBUG__ === 'undefined' ? false : __DEBUG__;

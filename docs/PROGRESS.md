@@ -3,7 +3,7 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 0 complete (scaffolding). Phase 1 not started.**
+Status: **Phase 1 complete (grid + drag-merge). Phase 2 not started.**
 
 ---
 
@@ -17,16 +17,23 @@ Status: **Phase 0 complete (scaffolding). Phase 1 not started.**
 
 ---
 
-## Phase 1 — Grid and drag-merge
+## Phase 1 — Grid and drag-merge (done)
 
-- [ ] `LayoutService` wired into GameScene, recomputing on resize
-- [ ] `Grid`: cell state, ally/enemy areas, free-cell lookup
-- [ ] Board rendered through `gridToWorld()` only, no hardcoded positions
-- [ ] `Unit` entity with tier, HP, sprite
-- [ ] Drag a unit between cells (pointer and touch)
-- [ ] `MergeSystem`: same-tier merge → next tier at full HP, capped at T8
-- [ ] Merge and invalid-drop feedback
-- [ ] 44px touch-target warning verified on a phone-sized viewport
+- [x] `LayoutService` wired into GameScene, recomputing on resize
+- [x] `Grid`: cell state, ally/enemy areas, free-cell lookup
+- [x] Board rendered through `gridToWorld()` only, no hardcoded positions
+- [x] `Unit` entity with tier and placeholder art (rounded rect + tier number,
+      tier colour from an 8-way HSL split). HP moved to Phase 2 with combat;
+      sprites land in Phase 6
+- [x] Drag a unit between cells, mouse and touch, 8px drag threshold
+- [x] `MergeSystem`: same-tier merge → next tier, capped at T8; different tier
+      swaps; empty ally cell moves. Full-HP-on-merge arrives with HP in Phase 2
+- [x] Merge and invalid-drop feedback (drop ring drawn outside the cell so the
+      dragged unit cannot cover it; drag is scaled up and translucent)
+- [x] 44px touch-target warning verified on a phone-sized viewport
+- [x] Debug SUMMON button in UIScene, communicating by event only (rule 7).
+      Energy cost follows in Phase 3
+- [x] i18n string table added so no display text is a literal (rule 8)
 
 ## Phase 2 — Enemies, combat, waves
 

@@ -35,6 +35,11 @@ export interface WorldPoint {
   y: number;
 }
 
+export interface CellCoord {
+  col: number;
+  row: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -93,14 +98,29 @@ export class LayoutService {
     return point;
   }
 
-  /** Cell under a world position, or null when the point is off the board. */
-  worldToGrid(x: number, y: number): { col: number; row: number } | null {
+  /**
+   * Cell under a world position. Fills `out` and returns true when the point is
+   * on the board; returns false and leaves `out` untouched otherwise.
+   *
+   * Takes an out param because pointermove calls this on every event.
+   */
+  worldToGrid(x: number, y: number, out: CellCoord): boolean {
     const { originX, originY, cell } = this.metrics;
-    if (cell <= 0) return null;
+    if (cell <= 0) return false;
     const col = Math.floor((x - originX) / cell);
     const row = Math.floor((y - originY) / cell);
-    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null;
-    return { col, row };
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return false;
+    out.col = col;
+    out.row = row;
+    return true;
+  }
+
+  /** Top-left corner of cell (col,row) — for drawing cell-sized rectangles. */
+  cellTopLeft(col: number, row: number, out: WorldPoint): WorldPoint {
+    const { originX, originY, cell } = this.metrics;
+    out.x = originX + col * cell;
+    out.y = originY + row * cell;
+    return out;
   }
 
   private warnIfCellTooSmallForTouch(cssScale: number): void {

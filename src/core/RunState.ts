@@ -1,3 +1,6 @@
+import balance from '../config/balance.json';
+import { ALLY_TOP_ROW_DEFAULT } from '../config/constants';
+
 /**
  * The single source of truth for the current run (rule 6).
  *
@@ -5,7 +8,8 @@
  * modifiers they produce all live here. Scenes read this object — they never
  * keep their own copy of any of it.
  *
- * Stub — filled in across Phases 1-4.
+ * Phase 1 only populates the board-shape and merge fields; the economy fields
+ * arrive in Phase 3 and the upgrade fields in Phase 4.
  */
 
 export interface RunUpgradeState {
@@ -28,8 +32,22 @@ export class RunState {
   summonsThisWave = 0;
   revivesUsed = 0;
 
+  /** Topmost row the player may occupy. `boardExpand` lowers this to 3. */
+  allyTopRow: number = ALLY_TOP_ROW_DEFAULT;
+
+  /** Highest tier a merge can produce. */
+  readonly maxTier: number = balance.merge.maxTier;
+
   /** Reset for a new run, seeded by permanent upgrades from SaveService. */
   reset(): void {
-    // TODO(phase-3)
+    this.lives = balance.run.startLives;
+    this.energy = balance.energy.start;
+    this.gold = 0;
+    this.waveIndex = 0;
+    this.stageId = 1;
+    this.summonsThisWave = 0;
+    this.revivesUsed = 0;
+    this.allyTopRow = ALLY_TOP_ROW_DEFAULT;
+    // TODO(phase-7): apply permanent upgrades from SaveService here.
   }
 }

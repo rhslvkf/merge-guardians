@@ -1,0 +1,5 @@
+{
+  "debug.summon": "SUMMON",
+  "summon.blocked.boardFull": "Board full",
+  "summon.blocked.energy": "Not enough energy"
+}
