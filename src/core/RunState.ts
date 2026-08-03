@@ -1,6 +1,8 @@
 import balance from '../config/balance.json';
 import { ALLY_TOP_ROW_DEFAULT } from '../config/constants';
 import wavesConfig from '../config/waves.json';
+import type { PermaUpgrades } from '../services/SaveService';
+import { bonusEnergy, bonusLives, dpsMultiplier } from './MetaProgress';
 
 /**
  * The single source of truth for the current run (rule 6).
@@ -9,8 +11,9 @@ import wavesConfig from '../config/waves.json';
  * changes that game over, retry and stage clear go through. Scenes read it;
  * none of them keep a copy.
  *
- * Phase 4 fills in the upgrade fields; Phase 7 seeds the permanent upgrades
- * from SaveService.
+ * Phase 4 fills in the run upgrade fields. Phase 7 adds `perma`, seeded from
+ * SaveService at boot and re-applied on every `startStage`, which is what makes
+ * a shop purchase show up in the next run without a reload.
  */
 
 const WAVES_PER_STAGE: number = wavesConfig.wavesPerStage;
@@ -60,8 +63,35 @@ export class RunState {
   /** Highest tier a merge can produce. */
   readonly maxTier: number = balance.merge.maxTier;
 
+  /**
+   * Permanent upgrade levels, mirrored from the save.
+   *
+   * Held here rather than read from SaveService on demand so the run has a
+   * single source of truth (rule 6) and the simulator can drive RunState
+   * without a storage layer.
+   */
+  perma: PermaUpgrades = { life: 0, energy: 0, dps: 0 };
+
+  /**
+   * Set while the first-run merge tutorial is on screen. Grants the larger
+   * starting energy, so nothing about the economy is what stops a new player
+   * reaching their first merge.
+   */
+  tutorialActive = false;
+
   get maxLives(): number {
     return balance.run.maxLives;
+  }
+
+  /** Starting lives including the permanent upgrade, capped at the heart row. */
+  get startingLives(): number {
+    return Math.min(this.maxLives, balance.run.startLives + bonusLives(this.perma));
+  }
+
+  /** Starting energy including the permanent upgrade and the tutorial grant. */
+  get startingEnergy(): number {
+    const base = this.tutorialActive ? balance.energy.tutorialStart : balance.energy.start;
+    return base + bonusEnergy(this.perma);
   }
 
   get canRevive(): boolean {
@@ -78,9 +108,14 @@ export class RunState {
     return (waveIndex + 1) % WAVES_PER_STAGE === 0;
   }
 
-  /** A brand new run from stage 1. */
+  /**
+   * A brand new run from stage 1.
+   *
+   * Gold is *not* cleared: it is the meta currency and lives in the save, so
+   * `startRun` seeds it from there. Clearing it here would delete a purchase
+   * budget every time the player pressed PLAY.
+   */
   reset(): void {
-    this.gold = 0;
     this.stageId = 1;
     this.upgrades.length = 0;
     this.startStage(1);
@@ -94,19 +129,23 @@ export class RunState {
     this.stageId = stageId;
     this.waveIndex = RunState.firstWaveOfStage(stageId);
     this.stageStartGold = this.gold;
-    this.lives = balance.run.startLives;
-    this.energy = balance.energy.start;
+    this.lives = this.startingLives;
+    this.energy = this.startingEnergy;
     this.summonsThisWave = 0;
     this.revivesUsed = 0;
     this.allyTopRow = ALLY_TOP_ROW_DEFAULT;
     this.attackInterval = balance.units.attackInterval;
-    this.dpsMult = 1;
+    this.dpsMult = dpsMultiplier(this.perma);
     this.energyRegen = balance.energy.regenPerSecond;
     this.summonCostStep = balance.energy.summonCostStep;
     this.upgrades.length = 0;
     this.mergeHeal = false;
     this.pendingFreeUnits.length = 0;
-    // TODO(phase-7): apply permanent upgrades from SaveService here.
+  }
+
+  /** Copy the shop levels in. Takes effect from the next `startStage`. */
+  applyPerma(levels: PermaUpgrades): void {
+    this.perma = { ...levels };
   }
 
   /** How many times an upgrade has been taken this run. */

@@ -31,12 +31,15 @@
     "summonCostStep": 1,
     "summonCostStepFloor": 0,
     "energyPerKill": 1,
-    "$note": "summonCost = summonBaseCost + summonCostStep * summonsThisWave; the counter resets each wave."
+    "$note": "summonCost = summonBaseCost + summonCostStep * summonsThisWave; the counter resets each wave.",
+    "tutorialStart": 26,
+    "$tutorialStart": "First-ever run, stage 1 only, while the merge tutorial is showing. Two summons cost 3 + 4 = 7, so this cannot be the reason a new player fails to reach their first merge inside 20s. Not modelled by the simulator: it applies to one wave of one run."
   },
   "run": {
     "startLives": 3,
-    "maxLives": 5,
-    "goldPerKill": 1
+    "maxLives": 6,
+    "goldPerKill": 1,
+    "$maxLives": "startLives 3 + startLife perma upgrade at max level 3. Below this the third level of that upgrade would buy nothing."
   },
   "enemies": {
     "baseHp": 40,
@@ -100,30 +103,31 @@
     "startLife": {
       "maxLevel": 3,
       "costs": [
-        50,
-        150,
-        400
+        100,
+        250,
+        600
       ],
       "livesPerLevel": 1
     },
     "startEnergy": {
       "maxLevel": 3,
       "costs": [
-        40,
-        120,
-        320
+        100,
+        250,
+        600
       ],
       "energyPerLevel": 5
     },
     "dpsBoost": {
       "maxLevel": 3,
       "costs": [
-        80,
-        240,
+        100,
+        250,
         600
       ],
       "dpsMultPerLevel": 0.05
-    }
+    },
+    "$costs": "Phase 7 brief: 100 / 250 / 600 for every permanent upgrade, so the shop is one ladder the player learns once."
   },
   "ads": {
     "reviveLifeRestored": 1,

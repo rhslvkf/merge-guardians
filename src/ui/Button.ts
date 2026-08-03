@@ -86,10 +86,31 @@ export class Button extends Phaser.GameObjects.Container {
   setEnabled(enabled: boolean): this {
     if (this.isEnabled === enabled) return this;
     this.isEnabled = enabled;
-    if (enabled) this.setInteractive(this.hitArea, Phaser.Geom.Rectangle.Contains);
-    else this.disableInteractive();
+    this.syncInteractive();
     this.redraw();
     return this;
+  }
+
+  /**
+   * Show or hide, and keep the hit area in step.
+   *
+   * A hidden button must not be clickable, and re-showing it must restore the
+   * hit area — `setVisible` alone does neither, and `setEnabled` short-circuits
+   * when the flag has not changed, so a hide/show pair would leave a visible
+   * button that ignores presses.
+   */
+  setShown(visible: boolean): this {
+    this.setVisible(visible);
+    this.syncInteractive();
+    return this;
+  }
+
+  private syncInteractive(): void {
+    if (this.isEnabled && this.visible) {
+      this.setInteractive(this.hitArea, Phaser.Geom.Rectangle.Contains);
+    } else {
+      this.disableInteractive();
+    }
   }
 
   private handleDown(): void {

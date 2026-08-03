@@ -6,11 +6,13 @@ import type { EnergySystem } from '../core/EnergySystem';
 import type { RunState } from '../core/RunState';
 import { t } from '../i18n';
 import type { LayoutService } from '../services/LayoutService';
+import type { TutorialHint as TutorialHintState } from '../core/TutorialSystem';
 import type { UpgradeCard } from '../core/UpgradeSystem';
 import type { WaveModifier } from '../core/WaveRunner';
 import { Button } from '../ui/Button';
 import { GameOverPanel } from '../ui/GameOverPanel';
 import { Hud } from '../ui/Hud';
+import { TutorialHint } from '../ui/TutorialHint';
 import { UpgradePanel } from '../ui/UpgradePanel';
 
 /**
@@ -28,6 +30,8 @@ const BANNER_SECONDS = 1.4;
 const BANNER_SIZE_RATIO = 0.055;
 const BANNER_SIZE_MAX = 54;
 const MODIFIER_BANNER_SECONDS = 1.5;
+/** Above the HUD, below the modal panels — which are added after it. */
+const TUTORIAL_DEPTH = 50;
 
 export class UIScene extends Phaser.Scene {
   private layout!: LayoutService;
@@ -44,6 +48,7 @@ export class UIScene extends Phaser.Scene {
   private upgradePanel!: UpgradePanel;
   private modifierBanner!: Phaser.GameObjects.Text;
   private modifierTimer = 0;
+  private tutorial!: TutorialHint;
 
   private bannerTimer = 0;
   private remainingEnemies = 0;
@@ -98,6 +103,9 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setVisible(false);
 
+    // Created before the modal panels so those cover it if both are up.
+    this.tutorial = new TutorialHint(this, TUTORIAL_DEPTH);
+
     this.upgradePanel = new UpgradePanel(this, {
       onPick: (id) => this.onUpgradePicked(id),
       onAdBonus: () => this.game.events.emit(GameEvent.UpgradeAdBonus),
@@ -126,6 +134,7 @@ export class UIScene extends Phaser.Scene {
     bus.on(GameEvent.Resumed, this.onResumed, this);
     bus.on(GameEvent.ModifierChanged, this.onModifierChanged, this);
     bus.on(GameEvent.UpgradeOffered, this.onUpgradeOffered, this);
+    bus.on(GameEvent.TutorialHint, this.onTutorialHint, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       bus.off(GameEvent.LayoutChanged, this.applyLayout, this);
@@ -137,6 +146,7 @@ export class UIScene extends Phaser.Scene {
       bus.off(GameEvent.Resumed, this.onResumed, this);
       bus.off(GameEvent.ModifierChanged, this.onModifierChanged, this);
       bus.off(GameEvent.UpgradeOffered, this.onUpgradeOffered, this);
+      bus.off(GameEvent.TutorialHint, this.onTutorialHint, this);
       this.input.keyboard?.off('keydown-ESC', this.togglePause, this);
     });
   }
@@ -180,6 +190,11 @@ export class UIScene extends Phaser.Scene {
     this.game.events.emit(GameEvent.UpgradePicked, id);
   }
 
+  /** GameScene decides what to point at; this scene only draws it (rule 7). */
+  private onTutorialHint(hint: TutorialHintState): void {
+    this.tutorial.apply(hint);
+  }
+
   private onBossHealthChanged(ratio: number): void {
     this.hud.setBossRatio(ratio);
   }
@@ -216,6 +231,10 @@ export class UIScene extends Phaser.Scene {
 
     this.hud.refresh(this.run, this.energy?.max ?? 0, this.remainingEnemies, this.waveInStage);
     this.refreshSummonButton();
+    this.tutorial.setSuppressed(
+      this.isPaused || this.gameOverPanel.visible || this.upgradePanel.visible
+    );
+    this.tutorial.update(dt);
 
     if (this.modifierTimer > 0) {
       this.modifierTimer -= dt;
@@ -280,7 +299,10 @@ export class UIScene extends Phaser.Scene {
 
     const buttonWidth = Math.min(width * BUTTON_WIDTH_RATIO, BUTTON_MAX_WIDTH);
     const buttonHeight = dockH * BUTTON_HEIGHT_RATIO;
-    this.summonButton.layoutAt(width / 2, height - dockH * 0.58, buttonWidth, buttonHeight);
+    const summonY = height - dockH * 0.58;
+    this.summonButton.layoutAt(width / 2, summonY, buttonWidth, buttonHeight);
+    // Follows the button through every resize, so the hint never drifts off it.
+    this.tutorial.setSummonTarget(width / 2, summonY);
     this.summonHint
       .setFontSize(Math.max(10, Math.round(height * 0.017)))
       .setPosition(width / 2, height - dockH * 0.16);

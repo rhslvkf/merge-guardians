@@ -3,11 +3,10 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 6 complete (art pipeline, motion, audio, backdrop). Phase 7 not started.**
-Sprite sheets are installed and the tier/enemy frames are chosen — the drawn
-shapes are gone. **Audio is still missing**, so the game runs silent; the nine
-clips are wired and start working the moment the files appear. See
-`docs/ASSETS.md`.
+Status: **Phase 7 complete (saving, meta progression, onboarding). Phase 8 not started.**
+Sprite sheets are installed. **Audio is still missing**, so the game runs
+silent; the nine clips are wired and start working the moment the files appear.
+See `docs/ASSETS.md`.
 
 ---
 
@@ -244,13 +243,83 @@ Both were caught by the debug page and by arithmetic, not by the code running:
   fix is SPEC 3's side-panel HUD layout; it is a layout change, not an art one,
   and it is still not done. Flagged since Phase 1.
 
-## Phase 7 — Meta progression and saving
+## Phase 7 — Meta progression and saving (done)
 
-- [ ] `SaveService` with versioning and migration, `LocalAdapter`-backed
-- [ ] Persist best stage, unlocked stage, gold, permanent upgrades, sound
-- [ ] `MenuScene`: stage select and the permanent-upgrade shop
-- [ ] The 3 permanent upgrades (3 levels each) seeded into `RunState` at run start
-- [ ] `ResultScene`: run summary, retry, next stage
+- [x] `SaveService`: `get` / `set` / `flush` over an injected `SaveBackend`.
+      `LocalBackend` is the only place in the codebase that touches
+      `localStorage` (rule 2); `PortalBackend` is written and waiting for
+      Phase 8 to hand it a real adapter — the swap is one line in BootScene
+- [x] Versioned schema. `saveVersion` on the blob, migrations applied one step
+      at a time so a save two builds old goes through both. A gap in the chain
+      resets rather than handing malformed values to the game
+- [x] Every failure mode resolves to defaults instead of throwing: absent,
+      unparseable, not an object, or missing a field added in a later build.
+      `localStorage` access itself is wrapped — Safari private mode throws on
+      `setItem`, and a failed save must cost a session, not a crash
+- [x] Writes debounced 2s and coalesced, because portal cloud saves are
+      rate-limited. Forced on `pagehide` and on `visibilitychange` to hidden —
+      *not* `beforeunload`, which a backgrounded mobile tab often never fires
+- [x] Saved: `bestStage`, `unlockedStage`, `gold`, `permaUpgrades{life,energy,dps}`,
+      `settings{sfx,bgm}`, `tutorialDone`, `saveVersion`
+- [x] `MenuScene` rebuilt: PLAY (continues at the last unlocked stage), a stage
+      grid with drawn padlocks on the locked ones, the shop as a modal, and the
+      two sound toggles
+- [x] `core/MetaProgress.ts`: the shop as rules rather than UI — cost lookup,
+      affordability, purchase, and what a level is worth. Purchases write
+      straight through SaveService, so the screen and the next run cannot
+      disagree
+- [x] Permanent upgrades applied in `RunState.startStage`, so a purchase shows
+      up in the next run with no reload. `run.maxLives` raised to 6 in
+      balance.json, or the third level of the life upgrade would buy nothing
+- [x] Onboarding: `core/TutorialSystem.ts` (the decision, Phaser-free) and
+      `ui/TutorialHint.ts` (the drawing). Pointer pulses on the summon button,
+      then runs a dashed trail between two same-tier units; the first merge ends
+      it and writes `tutorialDone` immediately
+- [x] Gold flows: seeded into the run from the save, banked back on every wave
+      clear, stage clear, game over and quit-to-menu
+
+### Deviations and judgement calls
+
+- The brief's field names (`permaUpgrades`, `settings`, `saveVersion`) replaced
+  the Phase 0 stub's (`meta`, `sound`, `version`). The v0 → v1 migration handles
+  the old shape, which is also what makes the migration chain testable rather
+  than decorative.
+- `RunState.reset()` no longer clears gold. Gold is the meta currency and lives
+  in the save; clearing it on PLAY would have deleted the shop budget every run.
+- Costs in `balance.json` were 50/150/400, 40/120/320 and 80/240/600. The brief
+  fixes one ladder — 100/250/600 — for all three, so that is what shipped.
+
+### Measurements
+
+A scripted first-time player that reads **only the on-screen pointer** — never
+the grid, the run state or the rules — and moves with human delays (650ms to
+notice, 380ms to reach):
+
+| viewport | hint appears | first merge | taps | drags |
+|---|---|---|---|---|
+| 500x900 portrait | 0.0s | **5.2s** | 2 | 1 |
+| 900x480 landscape | 0.0s | **5.0s** | 2 | 1 |
+
+Against a 20s target. If the hint were wrong or invisible this agent would sit
+there, which is the point of driving it from the pointer rather than the state.
+
+### Two bugs the tests caught
+
+- **The tutorial energy grant never applied.** `startStage` deals out the
+  starting energy, and it runs in MenuScene *before* GameScene exists — so by
+  the time the tutorial armed itself and set `tutorialActive`, the energy was
+  already dealt. Fixed inside `TutorialSystem.start`, which now tops the energy
+  up itself (with `max`, so it can only help) rather than depending on ordering.
+- **`Button.setEnabled` short-circuits when the flag has not changed**, so a
+  hide/show pair left a visible button with no hit area. Added `setShown`, which
+  keeps visibility and interactivity in step.
+
+### Still open
+
+- Audio (unchanged from Phase 6) — nine clips, see `docs/ASSETS.md`.
+- One flaky regression check: phase 2's "next wave starts after the gap" waits a
+  fixed time for the inter-wave delay and can slip under load in this container.
+  Passed on re-run; the check wants a poll rather than a sleep.
 
 ## Phase 8 — SDK, build, submission prep
 

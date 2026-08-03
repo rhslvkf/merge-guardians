@@ -101,6 +101,8 @@ export const Palette = {
   vignetteEdge: 0x000000,
   /** Screen-edge pulse when a life is lost. */
   vignetteDanger: 0xdc2626,
+  /** Numeric twin of `hudLabel`, for Graphics (which cannot take a CSS string). */
+  hudLabelFill: 0x94a3b8,
 } as const;
 
 /**
@@ -176,6 +178,7 @@ export const RegistryKey = {
   EnergySystem: 'energySystem',
   Art: 'art',
   Audio: 'audio',
+  Save: 'save',
 } as const;
 
 /** Vite replaces `__DEBUG__` at build time so debug logging drops out of production. */
@@ -225,4 +228,6 @@ export const GameEvent = {
   MenuRequested: 'run:menu-requested',
   /** Payload: modifier id for the wave that is starting. */
   ModifierChanged: 'wave:modifier',
+  /** Payload: a TutorialHint. GameScene decides, UIScene draws (rule 7). */
+  TutorialHint: 'tutorial:hint',
 } as const;

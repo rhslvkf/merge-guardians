@@ -5,6 +5,7 @@ import { RunState } from '../core/RunState';
 import { ArtService } from '../services/ArtService';
 import { AudioService } from '../services/AudioService';
 import { LayoutService } from '../services/LayoutService';
+import { SaveService } from '../services/SaveService';
 import { LocalAdapter } from '../services/portal/LocalAdapter';
 
 /**
@@ -23,7 +24,14 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.registry.set(RegistryKey.Layout, new LayoutService());
-    this.registry.set(RegistryKey.RunState, new RunState());
+
+    const run = new RunState();
+    this.registry.set(RegistryKey.RunState, run);
+
+    // LocalBackend by default; Phase 8 swaps in PortalBackend(adapter) here and
+    // nothing else changes.
+    const save = new SaveService();
+    this.registry.set(RegistryKey.Save, save);
 
     // Created here rather than in PreloadScene: entities resolve their art
     // through the registry on construction, so the service has to exist before
@@ -39,11 +47,20 @@ export class BootScene extends Phaser.Scene {
 
     if (DEBUG) console.log('[boot] portal adapter: local');
 
-    // The probes run alongside portal init, so the optional packs cost one
-    // round trip rather than a serialised wait. PreloadScene then queues only
-    // the files that are actually there, and calls loadingFinished().
-    void Promise.all([portal.init(), art.probe(), audio.probe()]).then(() =>
-      this.scene.start(SceneKey.Preload)
-    );
+    // The probes and the save read all run alongside portal init, so the
+    // optional packs cost one round trip rather than a serialised wait.
+    // PreloadScene then queues only the files that are there.
+    void Promise.all([portal.init(), art.probe(), audio.probe(), save.init()]).then(() => {
+      // Everything downstream reads the save through these two, so seed them
+      // before any scene that might look: the shop levels the next run starts
+      // with, and the sound settings the first note obeys.
+      run.applyPerma(save.get('permaUpgrades'));
+      run.gold = save.get('gold');
+      const settings = save.get('settings');
+      audio.setSfxEnabled(settings.sfx);
+      audio.setMusicEnabled(settings.bgm);
+
+      this.scene.start(SceneKey.Preload);
+    });
   }
 }

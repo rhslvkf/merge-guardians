@@ -159,9 +159,34 @@ excluded from the candidate pool before drawing.
   rather than authored per wave — hand-written compositions were the source of
   every difficulty cliff the Phase 5 simulator found.
 - `waveIndex` accumulates across stages — stage 3's third wave is `waveIndex 12`.
-- Saved: best cleared stage, unlocked stage, accumulated gold, the 3 permanent upgrades, sound settings.
-- Permanent upgrades (bought with gold, 3 levels each): starting lives +1 / starting energy +5 / all-tier DPS +5%.
+- Saved: best cleared stage, unlocked stage, accumulated gold, the 3 permanent
+  upgrades, sound settings, and whether the first-run tutorial is finished.
+- Permanent upgrades (bought with gold, 3 levels each): starting lives +1 /
+  starting energy +5 / all-tier DPS +5%. **100 / 250 / 600 gold per level**, the
+  same ladder for all three.
 - **All persistence goes through `SaveService`. No file calls `localStorage` directly** — it gets swapped for portal cloud save.
+- `SaveService` is `get(key)` / `set(key, value)` / `flush()`, over an injected
+  backend (`LocalBackend` now, `PortalBackend` in Phase 8). Writes are debounced
+  by 2s and coalesced, because portal cloud saves are rate-limited; `flush()`
+  forces one, and the page-hide handlers force one too.
+- The blob carries `saveVersion`, and migrations run one version step at a time.
+  A save from an older build is upgraded, never discarded.
+- Gold is the meta currency and lives in the save. A run seeds `RunState.gold`
+  from it and banks back on every wave clear, stage clear, game over and quit.
+
+### Onboarding (first run only)
+
+- **No text tutorial.** A player who has to read a panel before touching
+  anything is a player who leaves.
+- Stage 1, wave 1, and only for someone who has never merged: a pointer pulses
+  on the summon button; once a unit is placed it becomes a pointer running a
+  dashed trail between two same-tier units. The first merge ends it for good.
+- If the merge step has no pair to point at, it falls back to the summon hint —
+  "drag this onto that" needs a *that*.
+- Stage 1 grants a larger starting energy while the tutorial is up
+  (`energy.tutorialStart`), so the economy is never what stops a new player
+  reaching their first merge.
+- Target: first merge inside 20 seconds, with no instructions.
 
 ---
 

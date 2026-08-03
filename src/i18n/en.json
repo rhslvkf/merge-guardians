@@ -1,21 +1,16 @@
 {
   "game.title": "MERGE GUARDIANS",
-  "menu.play": "PLAY",
+  "menu.play": "PLAY  STAGE {n}",
   "menu.hint": "Merge your guardians. Hold the line.",
-
   "preload.loading": "LOADING",
   "preload.progress": "LOADING {percent}%",
-
   "summon.label": "SUMMON  {cost}",
   "summon.blocked.boardFull": "No free space",
   "summon.blocked.energy": "Not enough energy",
-
   "combat.block": "BLOCK",
   "reward.kill": "+{energy}⚡ +{gold}◆",
-
   "wave.banner": "WAVE {n}",
   "wave.cleared": "WAVE CLEAR",
-
   "modifier.none.name": "",
   "modifier.none.desc": "",
   "modifier.blockedColumn.name": "ROCKFALL",
@@ -26,7 +21,6 @@
   "modifier.fog.desc": "You cannot see what is coming.",
   "modifier.rush.name": "RUSH",
   "modifier.rush.desc": "Fewer enemies, arriving much faster.",
-
   "upgrade.heading": "CHOOSE AN UPGRADE",
   "upgrade.stacks": "x{n}",
   "upgrade.adGold": "WATCH AD - DOUBLE GOLD",
@@ -57,29 +51,42 @@
   "upgrade.mergeHeal.name": "FIELD REPAIR",
   "upgrade.mergeHeal.desc": "Merging heals neighbouring guardians.",
   "upgrade.mergeHeal.short": "HEAL",
-
   "hud.energy": "{n}/{max}",
   "hud.lives": "♥ {n}",
   "hud.gold": "◆ {n}",
   "hud.wave": "STAGE {stage} - WAVE {wave}",
   "hud.enemiesRemaining": "ENEMIES {n}",
   "hud.pause": "II",
-
   "pause.title": "PAUSED",
   "pause.resume": "RESUME",
   "pause.menu": "QUIT TO MENU",
-
   "gameOver.title": "GAME OVER",
   "gameOver.goldEarned": "Gold earned: {n}",
   "gameOver.revive": "REVIVE (AD)",
   "gameOver.restart": "RESTART",
   "gameOver.menu": "MENU",
-
   "result.title": "STAGE {n} CLEAR",
   "result.goldEarned": "Gold earned: {n}",
   "result.goldTotal": "Total gold: {n}",
   "result.next": "NEXT STAGE",
   "result.retry": "RETRY STAGE",
   "result.menu": "MENU",
-  "result.allClear": "All stages cleared!"
+  "result.allClear": "All stages cleared!",
+  "menu.stages": "OR PICK A STAGE",
+  "menu.shop": "UPGRADES",
+  "menu.gold": "◆ {n}",
+  "settings.sfx": "SFX ON",
+  "settings.sfxOff": "SFX OFF",
+  "settings.bgm": "BGM ON",
+  "settings.bgmOff": "BGM OFF",
+  "shop.title": "PERMANENT UPGRADES",
+  "shop.buy": "◆ {cost}",
+  "shop.maxed": "MAX",
+  "shop.close": "CLOSE",
+  "shop.life.name": "STOUT GATE",
+  "shop.life.desc": "{amount} starting life, every run.",
+  "shop.energy.name": "DEEP RESERVES",
+  "shop.energy.desc": "{amount} starting energy, every run.",
+  "shop.dps.name": "WHETSTONE",
+  "shop.dps.desc": "{amount} damage for all guardians."
 }

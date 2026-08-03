@@ -15,6 +15,7 @@ import { ProjectilePool } from '../entities/Projectile';
 import { Unit } from '../entities/Unit';
 import type { AudioService } from '../services/AudioService';
 import type { LayoutService, CellCoord } from '../services/LayoutService';
+import type { SaveService } from '../services/SaveService';
 import type { PortalAdapter } from '../services/portal/PortalAdapter';
 import type { BoardRenderer } from '../ui/BoardRenderer';
 import type { Effects } from '../ui/Effects';
@@ -24,6 +25,7 @@ import type { Grid } from './Grid';
 import type { ModifierSystem } from './ModifierSystem';
 import { RunState } from './RunState';
 import type { UpgradeSystem } from './UpgradeSystem';
+import { stageCount } from './rules';
 import { INTER_WAVE_DELAY, WaveRunner } from './WaveRunner';
 
 /**
@@ -57,6 +59,7 @@ export interface RunFlowDeps {
   projectiles: ProjectilePool;
   effects: Effects;
   audio: AudioService;
+  save?: SaveService;
   portal?: PortalAdapter;
 }
 
@@ -137,6 +140,10 @@ export class RunFlow {
     waves.stop();
     projectiles.releaseAll();
     this.d.audio.play('waveClear');
+    // Bank the gold every wave rather than only at stage end: a player who
+    // closes the tab mid-stage keeps what they earned. The 2s debounce means
+    // this is one write per wave at most.
+    this.bankGold();
     scene.game.events.emit(GameEvent.WaveCleared, run.waveIndex);
 
     if (RunState.isLastWaveOfStage(run.waveIndex)) {
@@ -151,6 +158,7 @@ export class RunFlow {
 
   private onStageCleared(): void {
     this.phase = 'over';
+    this.recordStageCleared();
     // TODO(phase-8): gameplayStop() first, then the end-of-stage midroll.
     this.d.portal?.gameplayStop();
     this.d.scene.game.events.emit(GameEvent.StageCleared, this.d.run.stageId);
@@ -194,6 +202,35 @@ export class RunFlow {
     const earned = this.d.run.goldThisStage;
     this.d.run.gold += earned;
     if (DEBUG) console.log(`[ads] double-gold stub granted +${earned}`);
+  }
+
+  // --- persistence -------------------------------------------------------
+
+  /** Push the run's gold total into the save (rule 2). Debounced by SaveService. */
+  private bankGold(): void {
+    this.d.save?.set('gold', this.d.run.gold);
+  }
+
+  /**
+   * Clearing a stage banks the gold and unlocks the next one.
+   *
+   * `unlockedStage` never exceeds the number of stages that exist, so the
+   * select grid cannot offer a stage `waves.json` has no schedule for.
+   */
+  private recordStageCleared(): void {
+    const save = this.d.save;
+    if (!save) return;
+
+    const cleared = this.d.run.stageId;
+    this.bankGold();
+    save.set('bestStage', Math.max(save.get('bestStage'), cleared));
+    save.set(
+      'unlockedStage',
+      Math.max(save.get('unlockedStage'), Math.min(cleared + 1, stageCount()))
+    );
+    // The stage-clear screen is a natural stopping point, so do not sit on the
+    // debounce here — write it out now.
+    void save.flush();
   }
 
   private beginInterWaveGap(): void {
@@ -243,6 +280,7 @@ export class RunFlow {
 
   private onGameOver(): void {
     this.phase = 'over';
+    this.bankGold();
     this.d.portal?.gameplayStop();
     this.d.scene.game.events.emit(GameEvent.GameOver, this.d.run.goldThisStage);
     this.d.scene.scene.pause();
@@ -301,6 +339,7 @@ export class RunFlow {
   goToMenu(): void {
     // TODO(phase-8): no commercialBreak() on the way out to the menu — that is
     // an instant Poki rejection.
+    this.bankGold();
     const s = this.d.scene;
     s.scene.stop(SceneKey.UI);
     s.scene.resume();

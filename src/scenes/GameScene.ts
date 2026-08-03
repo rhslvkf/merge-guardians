@@ -8,12 +8,14 @@ import { MergeSystem } from '../core/MergeSystem';
 import { ModifierSystem } from '../core/ModifierSystem';
 import { RunFlow } from '../core/RunFlow';
 import { RunState } from '../core/RunState';
+import { TutorialSystem } from '../core/TutorialSystem';
 import { UpgradeSystem } from '../core/UpgradeSystem';
 import { WaveRunner } from '../core/WaveRunner';
 import { EnemyPool } from '../entities/Enemy';
 import { ProjectilePool } from '../entities/Projectile';
 import { Unit } from '../entities/Unit';
 import type { AudioService } from '../services/AudioService';
+import type { SaveService } from '../services/SaveService';
 import type { PortalAdapter } from '../services/portal/PortalAdapter';
 import { LayoutService, type CellCoord } from '../services/LayoutService';
 import { Backdrop } from '../ui/Backdrop';
@@ -43,6 +45,8 @@ export class GameScene extends Phaser.Scene {
   private enemies!: EnemyPool;
   private projectiles!: ProjectilePool;
   private board!: BoardRenderer;
+  private tutorial!: TutorialSystem;
+  private save?: SaveService;
   private effects!: Effects;
   private audio!: AudioService;
   private flow!: RunFlow;
@@ -62,6 +66,7 @@ export class GameScene extends Phaser.Scene {
     this.portal = this.registry.get(RegistryKey.Portal) as PortalAdapter | undefined;
     this.audio = this.registry.get(RegistryKey.Audio) as AudioService;
     this.audio.attach(this);
+    this.save = this.registry.get(RegistryKey.Save) as SaveService | undefined;
 
     new Backdrop(this);
     this.effects = new Effects(this);
@@ -93,6 +98,7 @@ export class GameScene extends Phaser.Scene {
     this.modifiers = new ModifierSystem(this, this.grid, this.layout);
     this.upgrades = new UpgradeSystem(this.run, this.grid);
     this.board = new BoardRenderer(this, this.layout, this.grid, this.run, this.modifiers);
+    this.tutorial = new TutorialSystem(this.grid, this.layout, this.run);
 
     this.flow = new RunFlow({
       scene: this,
@@ -109,11 +115,23 @@ export class GameScene extends Phaser.Scene {
       projectiles: this.projectiles,
       effects: this.effects,
       audio: this.audio,
+      save: this.save,
       portal: this.portal,
     });
 
-    // The bomb modifier defuses when the marked cell takes part in a merge.
-    this.mergeSystem.onMerge = (fc, fr, tc, tr) => this.modifiers.notifyMerge(fc, fr, tc, tr);
+    // The bomb modifier defuses when the marked cell takes part in a merge, and
+    // the same signal ends the tutorial — a merge is the one thing it teaches.
+    this.mergeSystem.onMerge = (fc, fr, tc, tr) => {
+      this.modifiers.notifyMerge(fc, fr, tc, tr);
+      this.onFirstMerge();
+    };
+
+    // Only ever on the very first run: stage 1, wave 1, never seen before.
+    this.tutorial.start(
+      this.save?.get('tutorialDone') === false &&
+        this.run.stageId === 1 &&
+        this.run.waveIndex === 0
+    );
 
     // UIScene reads these rather than holding copies of its own (rules 6 and 7).
     this.registry.set(RegistryKey.EnergySystem, this.energy);
@@ -212,6 +230,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (!this.grid.randomFreeAllyCell(this.scratchCell)) return;
+    this.tutorial.notifySummon();
 
     const unit = new Unit(this, 1);
     unit.setDepth(Depth.Unit).redraw(this.layout.get().cell);
@@ -234,6 +253,30 @@ export class GameScene extends Phaser.Scene {
 
     this.reportRemaining();
     this.reportBossHealth();
+    this.reportTutorial();
+  }
+
+  /**
+   * The hint follows the board, so it is recomputed every frame — but
+   * `update()` compares before it writes, so the event only fires on a change.
+   */
+  private reportTutorial(): void {
+    if (!this.tutorial.update()) return;
+    this.game.events.emit(GameEvent.TutorialHint, this.tutorial.hint);
+  }
+
+  /**
+   * Record that onboarding is over.
+   *
+   * Written on the merge itself rather than at the end of the wave: a player
+   * who closes the tab straight after their first merge has still learnt the
+   * game, and should not be shown the hint again.
+   */
+  private onFirstMerge(): void {
+    if (!this.tutorial.active) return;
+    this.tutorial.notifyMerge();
+    this.save?.set('tutorialDone', true);
+    this.game.events.emit(GameEvent.TutorialHint, this.tutorial.hint);
   }
 
   /** Emit only on change, so the UI is not spammed every frame. */
