@@ -201,7 +201,8 @@ Two real fixes came out of this, both cutting work rather than pixels:
 
 ### Still open
 
-- **Four files crossed 300 lines** (rule 10 says propose the split, so:)
+- **Four files crossed 300 lines** (rule 10 says propose the split, so:).
+  **Deferred by decision — do not split these yet.**
   - `entities/Unit.ts` 314 → move the tier palette and `ensureUnitTextures` /
     `unitTextureKey` / `tierFillColor` into `entities/placeholderArt.ts`, beside
     `shapeTextures.ts`. Purely mechanical; takes Unit to ~250 and gives Enemy's
