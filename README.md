@@ -5,10 +5,9 @@
 **▶ [플레이 (GitHub Pages)](https://rhslvkf.github.io/merge-guardians/)**
 
 > 현재 상태: **Phase 6 (아트 파이프라인 / 모션 / 사운드)**. 10스테이지 50웨이브,
-> 합성·전투·업그레이드 드래프트까지 전부 플레이 가능합니다.
-> 스프라이트와 오디오 **파일 자체는 직접 받아서 넣는 방식**이며
-> ([docs/ASSETS.md](docs/ASSETS.md)), 파일이 없으면 도형 플레이스홀더와 무음으로
-> 그대로 동작합니다. 파일을 넣는 순간 코드 수정 없이 전환됩니다.
+> 합성·전투·업그레이드 드래프트까지 전부 플레이 가능하고 스프라이트도 적용됐습니다.
+> 오디오는 아직 없어서 무음으로 동작합니다 — 파일을 넣는 순간 코드 수정 없이
+> 켜집니다 ([docs/ASSETS.md](docs/ASSETS.md)).
 > 진행 상황은 [docs/PROGRESS.md](docs/PROGRESS.md)를 참고하세요.
 
 ---
@@ -97,6 +96,15 @@ public/assets/
 | [docs/BALANCE.md](docs/BALANCE.md) | 밸런스 수치의 근거와 변경 전후, 시뮬레이터 사용법 |
 | [docs/ASSETS.md](docs/ASSETS.md) | CC0 아트/오디오 팩 다운로드 링크, 파일 배치 경로, 프레임 인덱스 확인 방법 |
 | [CLAUDE.md](CLAUDE.md) | 코딩 규칙 10개와 AI 에이전트 작업 지침 |
+
+## 크레딧
+
+스프라이트는 모두 **CC0 1.0**(퍼블릭 도메인)이라 출처 표기 의무는 없지만, 감사의 뜻으로 남깁니다.
+
+- [Tiny Dungeon](https://kenney.nl/assets/tiny-dungeon) — [Kenney](https://kenney.nl) (유닛 T1~T8, 바위)
+- [Tiny Creatures](https://opengameart.org/content/tiny-creatures) — [Clint Bellanger](https://clintbellanger.net) (적 5종)
+
+---
 
 코드를 수정하기 전에 `docs/SPEC.md`를 먼저 읽으세요. 명세와 코드가 충돌하면 명세가 우선이며, 명세 자체를 바꿔야 한다면 같은 커밋에서 `docs/SPEC.md`를 함께 수정합니다.
 

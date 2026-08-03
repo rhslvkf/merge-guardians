@@ -1,6 +1,9 @@
-# Assets — what to download and where to put it
+# Assets
 
-Everything here is optional. The game boots, plays and passes its checks with an
+The sprite sheets are **installed and committed**. This page records where they
+came from, why these frames, and what is still missing (audio).
+
+Everything here is optional at runtime. The game boots, plays and passes its checks with an
 empty `public/assets/`: `ArtService` reports "not ready", the entities keep the
 drawn shapes from Phases 1–5, and `AudioService` runs silent. Installing the
 packs is a **file drop, not a code change** — nothing needs recompiling, and the
@@ -9,35 +12,79 @@ frame is which character.
 
 ## 1. Sprite sheets
 
-All three packs are **CC0 1.0** (public domain): commercial use, modification and
-redistribution are all allowed, and attribution is not required.
-
-| Pack | Download | File inside the archive | Copy it to |
+| Pack | Source | Author | In the repo |
 |---|---|---|---|
-| Kenney — Tiny Dungeon | <https://kenney.nl/assets/tiny-dungeon> | `Tilemap/tilemap_packed.png` | `public/assets/sheets/tiny-dungeon.png` |
-| Kenney — Tiny Battle | <https://kenney.nl/assets/tiny-battle> | `Tilemap/tilemap_packed.png` | `public/assets/sheets/tiny-battle.png` |
-| OpenGameArt — Tiny Creatures | <https://opengameart.org/content/tiny-creatures> | the packed sheet PNG | `public/assets/sheets/tiny-creatures.png` |
+| Tiny Dungeon 1.0 | <https://kenney.nl/assets/tiny-dungeon> | Kenney | `public/assets/sheets/tiny-dungeon.png` (5.3 KB, 12×11 = 132 frames) |
+| Tiny Creatures 1.0 | <https://opengameart.org/content/tiny-creatures> | Clint Bellanger | `public/assets/sheets/tiny-creatures.png` (11.5 KB, 10×18 = 180 frames) |
+| Tiny Battle 1.0 | <https://kenney.nl/assets/tiny-battle> | Kenney | **not shipped** — see below |
 
-Notes:
+All three are **CC0 1.0** (public domain): commercial use, modification and
+redistribution are all allowed, and attribution is not required. Credited in the
+README anyway, because it costs nothing.
 
-- Both Kenney archives contain a `Tilemap/` folder with `tilemap_packed.png`
-  (the packed sheet) and a `tilemap.png` (an unpacked variant), plus a `Tiles/`
-  folder of individual 16×16 PNGs. Take **`tilemap_packed.png`** — one HTTP
-  request instead of a hundred and thirty.
-- Both Kenney sheets are 16×16 tiles with **1px spacing and 0 margin**. That is
-  already declared in `src/config/assets.ts`.
-- Tiny Creatures is not packed by the same tool, so its tile size, margin and
-  spacing may differ. The debug page below has controls for exactly this.
-- Only `tiny-dungeon` and `tiny-creatures` are required (`REQUIRED_SHEETS`).
-  `tiny-battle` is optional extra variety.
+**Tiny Battle was evaluated and dropped.** It is a modern-warfare pack — tanks,
+jets, warships, factories, roads, national flags. Its only humanoids are modern
+infantry. Nothing in it reads as a fantasy guardian or a monster, so shipping it
+would have been 9 KB the game never draws.
+
+### Geometry — read this before adding a sheet
+
+Each pack ships **two** tilemaps and they are not interchangeable:
+
+- `Tilemap/tilemap.png` — 1px gaps between tiles. This is what the pack's own
+  `Tilesheet.txt` describes ("Space between tiles • 1px × 1px").
+- `Tilemap/tilemap_packed.png` — **no gaps.** This is the one we use.
+
+So `spacing` is **0** in `src/config/assets.ts`, not 1. The dimensions settle it:
+Tiny Dungeon's packed sheet is 192×176, which is exactly 12×11 tiles of 16px
+with nothing in between (with 1px gaps it would be 203×186 — which is precisely
+the size of the *other* file). Getting this wrong shears the whole grid by one
+pixel per column, which looks like slightly-wrong art rather than an obvious
+error, so check the arithmetic rather than trusting the readme.
 
 Keeping the original archives under `public/assets/raw/` is fine — that folder is
 gitignored and never shipped.
 
-## 2. Picking the frame indices
+## 2. Which frame is which
 
-Nobody can tell from the code which tile in a 130-sprite sheet is a knight, so
-the mapping is data, and there is a page for reading it off:
+Already chosen and recorded in `src/config/assets.ts`:
+
+| Role | Sheet | Frame | Sprite |
+|---|---|---|---|
+| T1 | dungeon | 88 | bare-chested peasant |
+| T2 | dungeon | 85 | villager in a tunic |
+| T3 | dungeon | 112 | green-banded warrior |
+| T4 | dungeon | 111 | hooded dwarf |
+| T5 | dungeon | 87 | horned viking |
+| T6 | dungeon | 97 | knight |
+| T7 | dungeon | 96 | plate knight |
+| T8 | dungeon | 84 | archmage |
+| rock (`blockedColumn`) | dungeon | 56 | boulder |
+| `normal` | creatures | 11 | goblin |
+| `shielded` | creatures | 18 | shield-bearer |
+| `flyer` | creatures | 135 | eagle |
+| `tank` | creatures | 126 | ogre |
+| `boss` | creatures | 96 | crowned king |
+
+Two constraints drove the tier picks, not one. The obvious one is a legible
+power ramp. The one that actually matters in a merge game is that **eight tiers
+must be distinguishable at cell size** — tan, tan+white, green, dark+red, horned
+grey, grey+gold, all grey, purple, with eight different silhouettes. T1 and T2
+are the closest pair, which is the right place to put it: they are the two the
+player merges away fastest, and both carry the tier badge.
+
+The enemy picks are about the *rule* each type carries being readable without a
+legend: the shield-bearer's shield is the tier ≤ 3 immunity, the eagle's wings
+are "passes over your units", the ogre's bulk is "slow and heavy", and the crown
+is the boss.
+
+The board floors stay drawn rather than tiled. A dungeon floor texture behind a
+7×8 grid reads as a second, conflicting grid, and the ally/enemy split is
+already carried by the two board tints.
+
+### Changing them
+
+To re-pick, use the page that produced this table:
 
 ```bash
 npm run dev
@@ -57,13 +104,15 @@ Click tiles to build a paste-ready list in the bottom-right panel:
 ```
 
 Paste those into `UNIT_SPRITES` (eight entries, T1 → T8) and `ENEMY_SPRITES`
-(`normal`, `shielded`, `flyer`, `tank`, `boss`) in `src/config/assets.ts`. The
-indices currently in the file are **placeholders** and will look wrong.
+(`normal`, `shielded`, `flyer`, `tank`, `boss`) in `src/config/assets.ts`.
 
 The page is dev-only: Vite bundles `index.html` alone, so `/debug-atlas/` ships
 nowhere.
 
-## 3. Audio
+## 3. Audio — still missing
+
+Nothing is installed yet, so the game runs silent. Every trigger below is wired
+and will start working the moment the file appears; no code change needed.
 
 Nine files, all under `public/assets/audio/`. Mono OGG Vorbis at ~64 kbps is the
 target — stereo buys nothing for one-shot SFX and doubles the bytes.
@@ -92,10 +141,10 @@ ffmpeg -i in.wav -ac 1 -c:a libvorbis -b:a 64k out.ogg
 
 ## 4. Budget
 
-`public/assets` must stay under **1.5 MB** total. Expected: three sheets at
-roughly 10–40 KB each, eight SFX at 3–8 KB each, and music — the music is the
-only thing that can blow the budget, so keep it to about 60 seconds of loop
-(~500 KB at 64 kbps mono).
+`public/assets` must stay under **1.5 MB** total. Currently **16.5 KB** — the two
+sheets. Eight SFX will add 3–8 KB each; the music is the only thing that can
+threaten the budget, so keep it to about 60 seconds of loop (~500 KB at 64 kbps
+mono) and there is still an order of magnitude of headroom.
 
 ## 5. What happens if a file is missing
 

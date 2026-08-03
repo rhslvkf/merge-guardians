@@ -4,9 +4,10 @@ Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
 Status: **Phase 6 complete (art pipeline, motion, audio, backdrop). Phase 7 not started.**
-The art and audio files themselves are a hand-install — see `docs/ASSETS.md`.
-Until they land, the game runs on the Phase 1–5 drawn shapes and in silence,
-by design: everything switches over on a file drop, with no code change.
+Sprite sheets are installed and the tier/enemy frames are chosen — the drawn
+shapes are gone. **Audio is still missing**, so the game runs silent; the nine
+clips are wired and start working the moment the files appear. See
+`docs/ASSETS.md`.
 
 ---
 
@@ -158,6 +159,11 @@ measurements and why hitting it needed a harsher beginner than the brief.
 - [x] No webfont: `FONT_STACK` (system monospace) replaces all 18 hardcoded
       `fontFamily: 'monospace'` occurrences
 - [x] `PreloadScene` is real: loading bar, portal `loadingFinished()`, then Menu
+- [x] Art installed: Kenney Tiny Dungeon (units + rock) and Clint Bellanger's
+      Tiny Creatures (enemies), both CC0. Frames picked off the debug page for a
+      power ramp *and* eight silhouettes distinguishable at cell size. Kenney
+      Tiny Battle was evaluated and dropped — modern warfare, nothing usable.
+      16.5 KB of 1.5 MB
 - [x] Verified: 20/20 scripted checks, Phases 1–4 regression still green,
       simulator unchanged. See "measurements" below
 
@@ -199,8 +205,27 @@ Two real fixes came out of this, both cutting work rather than pixels:
   edges, so it is drawn as four crops of the one texture and the centre of the
   screen is left alone.
 
+### Two things the manifest got wrong until the sheets were real
+
+Both were caught by the debug page and by arithmetic, not by the code running:
+
+- **Spacing.** Each pack ships `tilemap.png` (1px gaps, which is what its own
+  `Tilesheet.txt` documents) *and* `tilemap_packed.png` (no gaps). We use the
+  packed ones, so `spacing` is 0, not the 1 originally declared. Tiny Dungeon's
+  packed sheet is 192×176 = exactly 12×11 tiles of 16px; the 1px-gap variant is
+  203×186. Getting this wrong shears the grid by a pixel per column, which reads
+  as slightly-wrong art rather than an obvious bug.
+- **The bob assertion.** The first suite asserted the unit offset stays within
+  ±2px. That only holds with no enemies on the board: the offset is bob *plus*
+  recoil, and a unit that just fired legitimately sits up to RECOIL_PX beyond
+  it. The test was wrong, not the code — it now clears the board and zeroes
+  recoil so the ±2px bound means something.
+
 ### Still open
 
+- **Audio.** Nine clips, listed in `docs/ASSETS.md` with their triggers. Nothing
+  in the code has to change — `AudioService` skips keys that failed to load, so
+  the game is silent rather than broken.
 - **Four files crossed 300 lines** (rule 10 says propose the split, so:).
   **Deferred by decision — do not split these yet.**
   - `entities/Unit.ts` 314 → move the tier palette and `ensureUnitTextures` /
