@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { EnemyPalette, Palette } from '../config/constants';
 import type { RunState } from '../core/RunState';
 import { t } from '../i18n';
@@ -74,7 +75,7 @@ export class Hud {
     this.energyGauge = scene.add.graphics();
     this.bossBar = scene.add.graphics().setVisible(false);
 
-    const mono = (color: string) => ({ fontFamily: 'monospace', color });
+    const mono = (color: string) => ({ fontFamily: FONT_STACK, color });
     this.energyLabel = scene.add.text(0, 0, '', mono(Palette.energyText)).setOrigin(0.5);
     this.livesLabel = scene.add.text(0, 0, '', mono(Palette.lifeFull)).setOrigin(0, 0.5);
     this.goldLabel = scene.add.text(0, 0, '', mono(Palette.goldText)).setOrigin(1, 0.5);

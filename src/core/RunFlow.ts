@@ -5,17 +5,19 @@ import {
   DEBUG,
   Depth,
   GameEvent,
-  LIFE_LOST_FLASH_MS,
   LIFE_LOST_SHAKE_INTENSITY,
   LIFE_LOST_SHAKE_MS,
+  Palette,
   SceneKey,
 } from '../config/constants';
 import { EnemyPool } from '../entities/Enemy';
 import { ProjectilePool } from '../entities/Projectile';
 import { Unit } from '../entities/Unit';
+import type { AudioService } from '../services/AudioService';
 import type { LayoutService, CellCoord } from '../services/LayoutService';
 import type { PortalAdapter } from '../services/portal/PortalAdapter';
 import type { BoardRenderer } from '../ui/BoardRenderer';
+import type { Effects } from '../ui/Effects';
 import type { CombatSystem } from './CombatSystem';
 import type { EnergySystem } from './EnergySystem';
 import type { Grid } from './Grid';
@@ -53,6 +55,8 @@ export interface RunFlowDeps {
   combat: CombatSystem;
   enemies: EnemyPool;
   projectiles: ProjectilePool;
+  effects: Effects;
+  audio: AudioService;
   portal?: PortalAdapter;
 }
 
@@ -132,6 +136,7 @@ export class RunFlow {
 
     waves.stop();
     projectiles.releaseAll();
+    this.d.audio.play('waveClear');
     scene.game.events.emit(GameEvent.WaveCleared, run.waveIndex);
 
     if (RunState.isLastWaveOfStage(run.waveIndex)) {
@@ -171,6 +176,7 @@ export class RunFlow {
   }
 
   applyUpgrade(id: string): void {
+    this.d.audio.play('upgrade');
     const spawn = this.d.upgrades.apply(id);
     if (spawn?.immediate) this.placeUnits(spawn.tier, spawn.count);
 
@@ -221,10 +227,16 @@ export class RunFlow {
   // --- lives and session -------------------------------------------------
 
   private onLifeLost(count: number): void {
-    const { run, scene } = this.d;
+    const { run, scene, effects, audio } = this.d;
     run.lives = Math.max(0, run.lives - count);
-    scene.cameras.main.flash(LIFE_LOST_FLASH_MS, 180, 30, 30);
+
+    // A red vignette rather than a full-screen camera flash: the board stays
+    // readable, which matters when the next enemy is already halfway down.
+    const { width, height } = scene.scale.gameSize;
+    effects.vignetteFlash(width, height, Palette.vignetteDanger);
     scene.cameras.main.shake(LIFE_LOST_SHAKE_MS, LIFE_LOST_SHAKE_INTENSITY);
+    audio.play('lifeLost');
+
     scene.game.events.emit(GameEvent.LifeLost, run.lives);
     if (run.lives <= 0) this.onGameOver();
   }

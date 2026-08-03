@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { Palette } from '../config/constants';
 import { t } from '../i18n';
 import type { LayoutMetrics } from '../services/LayoutService';
@@ -44,13 +45,13 @@ export class GameOverPanel {
     this.panel = scene.add.graphics();
     this.title = scene.add
       .text(0, 0, t('gameOver.title'), {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.bannerText,
       })
       .setOrigin(0.5);
     this.subtitle = scene.add
-      .text(0, 0, '', { fontFamily: 'monospace', color: Palette.hudLabel })
+      .text(0, 0, '', { fontFamily: FONT_STACK, color: Palette.hudLabel })
       .setOrigin(0.5);
 
     this.reviveButton = new Button(scene, {

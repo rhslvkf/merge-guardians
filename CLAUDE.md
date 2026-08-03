@@ -77,15 +77,24 @@ Warn on the console when the computed cell measures under 44 CSS px.
 ## Layout of the source tree
 
 ```
-src/config/     balance.json, waves.json, upgrades.json, constants.ts
-src/core/       Grid, MergeSystem, CombatSystem, WaveRunner, EnergySystem, RunState
-src/entities/   Unit, Enemy, Projectile
+src/config/     balance.json, waves.json, upgrades.json, constants.ts, assets.ts
+src/core/       Grid, MergeSystem, CombatSystem, WaveRunner, EnergySystem,
+                RunState, RunFlow, ModifierSystem, UpgradeSystem, rules.ts
+src/entities/   Unit, Enemy, Projectile, shapeTextures
 src/scenes/     Boot, Preload, Menu, Game, UI, Result
-src/services/   LayoutService, SaveService, AudioService, portal/*
-src/ui/         Hud, UpgradePanel, GameOverPanel, Button
-tools/          simulate.ts (Node-only balance simulator)
-public/assets/  art and audio
+src/services/   LayoutService, SaveService, AudioService, ArtService,
+                assetProbe, portal/*
+src/ui/         Hud, UpgradePanel, GameOverPanel, Button, BoardRenderer,
+                FloatingText, Effects, Backdrop
+src/i18n/       index.ts, en.json
+tools/          simulate.ts, simEngine.ts, simPlayer.ts (Node-only simulator)
+debug-atlas/    dev-only sprite index browser, not part of the build
+public/assets/  art and audio — hand-installed, see docs/ASSETS.md
 ```
+
+Art and audio are optional at runtime: with `public/assets` empty the entities
+fall back to their drawn shapes and the game runs silent. Never make the game
+fail to boot on a missing asset.
 
 ## Commands
 

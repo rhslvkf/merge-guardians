@@ -3,6 +3,9 @@
   "menu.play": "PLAY",
   "menu.hint": "Merge your guardians. Hold the line.",
 
+  "preload.loading": "LOADING",
+  "preload.progress": "LOADING {percent}%",
+
   "summon.label": "SUMMON  {cost}",
   "summon.blocked.boardFull": "No free space",
   "summon.blocked.energy": "Not enough energy",

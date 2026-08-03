@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { Palette, RegistryKey, SceneKey } from '../config/constants';
 import type { RunState } from '../core/RunState';
 import { t } from '../i18n';
+import type { AudioService } from '../services/AudioService';
 import { LayoutService } from '../services/LayoutService';
+import { Backdrop } from '../ui/Backdrop';
 import { Button } from '../ui/Button';
 
 /**
@@ -29,16 +32,21 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.layout = this.registry.get(RegistryKey.Layout) as LayoutService;
 
+    // The title screen is where the player's first gesture usually lands, so
+    // this is where the audio context gets unlocked.
+    (this.registry.get(RegistryKey.Audio) as AudioService).attach(this);
+    new Backdrop(this);
+
     this.title = this.add
       .text(0, 0, t('game.title'), {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.bannerText,
       })
       .setOrigin(0.5);
 
     this.hint = this.add
-      .text(0, 0, t('menu.hint'), { fontFamily: 'monospace', color: Palette.hudLabel })
+      .text(0, 0, t('menu.hint'), { fontFamily: FONT_STACK, color: Palette.hudLabel })
       .setOrigin(0.5);
 
     this.playButton = new Button(this, {

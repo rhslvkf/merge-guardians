@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 
-import { Depth, GRID_COLS, GRID_ROWS, Palette } from '../config/constants';
+import { Depth, GRID_COLS, GRID_ROWS, Palette, RegistryKey } from '../config/constants';
 import type { Grid } from '../core/Grid';
 import type { ModifierSystem } from '../core/ModifierSystem';
 import type { RunState } from '../core/RunState';
+import type { ArtService } from '../services/ArtService';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
 
 /**
@@ -25,6 +26,9 @@ export class BoardRenderer {
   private readonly gfx: Phaser.GameObjects.Graphics;
   private readonly rockGfx: Phaser.GameObjects.Graphics;
   private readonly fogGfx: Phaser.GameObjects.Graphics;
+  /** One per board row — the most a sealed column can ever need. */
+  private readonly rockSprites: Phaser.GameObjects.Image[] = [];
+  private readonly art?: ArtService;
   private readonly scratch: WorldPoint = { x: 0, y: 0 };
 
   constructor(
@@ -37,6 +41,13 @@ export class BoardRenderer {
     this.gfx = scene.add.graphics().setDepth(Depth.Board);
     this.rockGfx = scene.add.graphics().setDepth(Depth.Rock);
     this.fogGfx = scene.add.graphics().setDepth(Depth.Fog);
+    this.art = scene.registry.get(RegistryKey.Art) as ArtService | undefined;
+
+    for (let i = 0; i < GRID_ROWS; i++) {
+      this.rockSprites.push(
+        scene.add.image(0, 0, '__DEFAULT').setDepth(Depth.Rock).setVisible(false)
+      );
+    }
   }
 
   redraw(): void {
@@ -79,18 +90,33 @@ export class BoardRenderer {
   private drawRocks(cell: number): void {
     const gfx = this.rockGfx;
     gfx.clear();
+    for (let i = 0; i < this.rockSprites.length; i++) this.rockSprites[i].setVisible(false);
 
     const col = this.grid.blockedColumn;
     if (col < 0) return;
 
+    const sprite = this.art?.rock() ?? null;
     const inset = cell * 0.1;
     const size = cell - inset * 2;
+    let used = 0;
 
     for (let row = 0; row < GRID_ROWS; row++) {
       if (!this.grid.isAllyArea(col, row)) continue;
       this.layout.cellTopLeft(col, row, this.scratch);
       const x = this.scratch.x + inset;
       const y = this.scratch.y + inset;
+
+      if (sprite) {
+        const image = this.rockSprites[used++];
+        image.setTexture(sprite.key, sprite.frame);
+        const source = Math.max(image.frame.width, image.frame.height);
+        image
+          .setScale(source > 0 ? size / source : 1)
+          .setPosition(x + size / 2, y + size / 2)
+          .setVisible(true);
+        continue;
+      }
+
       gfx.fillStyle(Palette.rockFill, 0.92);
       gfx.fillRoundedRect(x, y, size, size, size * 0.3);
       gfx.lineStyle(Math.max(1, cell * 0.04), Palette.rockStroke, 1);

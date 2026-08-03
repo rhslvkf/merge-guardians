@@ -13,9 +13,12 @@ import { WaveRunner } from '../core/WaveRunner';
 import { EnemyPool } from '../entities/Enemy';
 import { ProjectilePool } from '../entities/Projectile';
 import { Unit } from '../entities/Unit';
+import type { AudioService } from '../services/AudioService';
 import type { PortalAdapter } from '../services/portal/PortalAdapter';
 import { LayoutService, type CellCoord } from '../services/LayoutService';
+import { Backdrop } from '../ui/Backdrop';
 import { BoardRenderer } from '../ui/BoardRenderer';
+import { Effects } from '../ui/Effects';
 
 /**
  * Gameplay only: board, units, enemies, projectiles.
@@ -40,6 +43,8 @@ export class GameScene extends Phaser.Scene {
   private enemies!: EnemyPool;
   private projectiles!: ProjectilePool;
   private board!: BoardRenderer;
+  private effects!: Effects;
+  private audio!: AudioService;
   private flow!: RunFlow;
 
   private lastReportedRemaining = -1;
@@ -55,12 +60,24 @@ export class GameScene extends Phaser.Scene {
     this.layout = this.registry.get(RegistryKey.Layout) as LayoutService;
     this.run = this.registry.get(RegistryKey.RunState) as RunState;
     this.portal = this.registry.get(RegistryKey.Portal) as PortalAdapter | undefined;
+    this.audio = this.registry.get(RegistryKey.Audio) as AudioService;
+    this.audio.attach(this);
+
+    new Backdrop(this);
+    this.effects = new Effects(this);
 
     this.grid = new Grid(this.layout, this.run);
     this.enemies = new EnemyPool(this);
     this.projectiles = new ProjectilePool(this);
     this.energy = new EnergySystem(this.run, this.grid);
-    this.mergeSystem = new MergeSystem(this, this.grid, this.run, this.layout);
+    this.mergeSystem = new MergeSystem(
+      this,
+      this.grid,
+      this.run,
+      this.layout,
+      this.effects,
+      this.audio
+    );
     this.combat = new CombatSystem(
       this,
       this.grid,
@@ -68,7 +85,9 @@ export class GameScene extends Phaser.Scene {
       this.layout,
       this.enemies,
       this.projectiles,
-      this.energy
+      this.energy,
+      this.effects,
+      this.audio
     );
     this.waves = new WaveRunner(this.run, this.layout, this.enemies);
     this.modifiers = new ModifierSystem(this, this.grid, this.layout);
@@ -88,6 +107,8 @@ export class GameScene extends Phaser.Scene {
       combat: this.combat,
       enemies: this.enemies,
       projectiles: this.projectiles,
+      effects: this.effects,
+      audio: this.audio,
       portal: this.portal,
     });
 
@@ -196,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     unit.setDepth(Depth.Unit).redraw(this.layout.get().cell);
     this.grid.setUnit(this.scratchCell.col, this.scratchCell.row, unit);
     unit.snapToGrid(this.layout);
+    this.audio.play('summon');
     if (DEBUG && this.grid.blockedColumn >= 0) {
       // Sanity check while the blockedColumn modifier is young.
       console.assert(this.scratchCell.col !== this.grid.blockedColumn, 'summoned into rock');

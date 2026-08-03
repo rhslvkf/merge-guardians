@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { Palette } from '../config/constants';
 import type { UpgradeCard } from '../core/UpgradeSystem';
 import { t } from '../i18n';
@@ -50,7 +51,7 @@ export class UpgradePanel {
     this.backdrop = scene.add.graphics();
     this.heading = scene.add
       .text(0, 0, t('upgrade.heading'), {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.bannerText,
       })
@@ -60,13 +61,13 @@ export class UpgradePanel {
     for (let i = 0; i < 3; i++) {
       const bg = scene.add.graphics();
       const title = scene.add
-        .text(0, 0, '', { fontFamily: 'monospace', fontStyle: 'bold', color: Palette.cardTitle })
+        .text(0, 0, '', { fontFamily: FONT_STACK, fontStyle: 'bold', color: Palette.cardTitle })
         .setOrigin(0, 0.5);
       const desc = scene.add
-        .text(0, 0, '', { fontFamily: 'monospace', color: Palette.cardDesc })
+        .text(0, 0, '', { fontFamily: FONT_STACK, color: Palette.cardDesc })
         .setOrigin(0, 0);
       const stacks = scene.add
-        .text(0, 0, '', { fontFamily: 'monospace', color: Palette.cardStack })
+        .text(0, 0, '', { fontFamily: FONT_STACK, color: Palette.cardStack })
         .setOrigin(1, 0.5);
       const hit = scene.add.rectangle(0, 0, 10, 10, 0xffffff, 0).setInteractive();
       hit.on(Phaser.Input.Events.POINTER_UP, () => this.pick(i));

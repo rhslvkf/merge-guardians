@@ -222,3 +222,28 @@ Pause the game, mute audio and stop timers before any ad; restore all three afte
 - **No physics engine**, arcade physics included. The logic is grid-based and doesn't need one.
 - No additional runtime dependencies (portal SDK scripts excepted).
 - Rendering: `pixelArt: true`, `roundPixels: true`, `antialias: false`.
+
+---
+
+## 12. Assets (added in Phase 6)
+
+Art and audio are **optional at runtime**. The packs are hand-installed CC0
+downloads (see `docs/ASSETS.md`), so the game must boot, play and be testable
+without them: with no files present the entities keep their drawn shapes and the
+game is silent. Installing the packs is a file drop, never a code change.
+
+- The manifest is `src/config/assets.ts` — sheet geometry, tier → frame, enemy
+  type → frame, audio keys, font stack. It is data, and it is the only place any
+  of that mapping may live.
+- Which frame is which character is read off the dev-only `/debug-atlas/` page,
+  never guessed in code.
+- Missing files are detected before the loader runs, by HEAD request. Handing
+  Phaser a URL that resolves to a host's fallback HTML is not a clean miss — it
+  decodes as neither image nor audio and throws.
+- `public/assets` total stays under **1.5 MB**.
+- **No webfont.** UI text uses the system monospace stack in `FONT_STACK`; a
+  portal build must not block first paint on a font request.
+- Continuous motion (idle bob, fire recoil, hit flash) is a per-frame additive
+  offset, not a tween: bob and recoil write the same property, and two tweens on
+  one property fight every frame. One-shot effects (merge, death, life lost) are
+  pooled tweens.

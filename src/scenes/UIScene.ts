@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { GameEvent, MAX_FRAME_SECONDS, Palette, RegistryKey, SceneKey } from '../config/constants';
 import type { EnergySystem } from '../core/EnergySystem';
 import type { RunState } from '../core/RunState';
@@ -72,7 +73,7 @@ export class UIScene extends Phaser.Scene {
       onClick: () => this.game.events.emit(GameEvent.SummonRequested),
     });
     this.summonHint = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', color: Palette.hudLabel })
+      .text(0, 0, '', { fontFamily: FONT_STACK, color: Palette.hudLabel })
       .setOrigin(0.5)
       .setAlpha(0.9);
 
@@ -83,13 +84,13 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.banner = this.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontStyle: 'bold', color: Palette.bannerText })
+      .text(0, 0, '', { fontFamily: FONT_STACK, fontStyle: 'bold', color: Palette.bannerText })
       .setOrigin(0.5)
       .setVisible(false);
 
     this.modifierBanner = this.add
       .text(0, 0, '', {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.bannerText,
         align: 'center',

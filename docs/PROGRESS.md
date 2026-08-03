@@ -3,7 +3,10 @@
 Update this file as work lands. Do not start a phase before the one before it is
 done, and do not implement a later phase early.
 
-Status: **Phase 5 complete (simulator + retuned balance). Phase 6 not started.**
+Status: **Phase 6 complete (art pipeline, motion, audio, backdrop). Phase 7 not started.**
+The art and audio files themselves are a hand-install — see `docs/ASSETS.md`.
+Until they land, the game runs on the Phase 1–5 drawn shapes and in silence,
+by design: everything switches over on a file drop, with no code change.
 
 ---
 
@@ -121,14 +124,99 @@ next wave loop and the session transitions moved to `core/RunFlow.ts`.
 The `sloppy` target of wave 12-15 was not reached — see BALANCE.md for the
 measurements and why hitting it needed a harsher beginner than the brief.
 
-## Phase 6 — Art, sound, polish
+## Phase 6 — Art, sound, polish (done)
 
-- [ ] Unit sprites, T1–T8 clearly distinguishable at cell size
-- [ ] Enemy sprites per type, readable under `fog`
-- [ ] Hit / merge / explosion / life-lost effects
-- [ ] SFX + BGM through `AudioService`, with mute/restore for ads
-- [ ] i18n table (English) and every string routed through a key
-- [ ] 60fps on a mid-range phone, no allocation in the update loop
+- [x] `src/config/assets.ts`: sheet geometry, tier → frame, enemy type → frame,
+      the nine audio keys and the font stack, all as data. Frame indices are
+      placeholders until read off the debug page
+- [x] `/debug-atlas/` dev page: every frame of every sheet at 4x with its
+      row-major index, adjustable tile/margin/spacing, click-to-pick producing
+      paste-ready manifest lines. Dev-only — Vite bundles `index.html` alone
+- [x] `ArtService`: per-sheet availability, `{key, frame} | null` resolution.
+      `null` means the caller keeps its drawn shape, so a fresh checkout runs
+- [x] `Unit` and `Enemy` take a sprite frame when the pack is present and the
+      baked shape when it is not; with sprites the tier number becomes a badge
+      under the unit instead of its whole face
+- [x] `services/assetProbe.ts`: HEAD-probe every optional file at boot, in one
+      parallel batch, so the loader is never handed a URL that resolves to the
+      host's fallback HTML (which decodes as neither image nor audio and throws)
+- [x] Motion. Idle bob (±2px, 1.2s, per-unit phase) and fire recoil (4px) are an
+      additive per-frame offset on an inner container, not tweens — they write
+      the same `y` as each other and as grid positioning, and competing tweens on
+      one property fight every frame. Hit flash is a tint with a countdown, so a
+      board being shot at creates no timers. All three allocate nothing (rule 4)
+- [x] `ui/Effects.ts`: the one-shot juice as pooled tweens — merge absorb (130ms
+      suck-in) then pop (1.3x, Back.Out) plus an expanding ring, enemy death
+      (pooled ghost shrinking to 0.6 and fading, 6 shards), red vignette on a
+      life lost
+- [x] `AudioService`: eight SFX + looping BGM, context unlocked on the first
+      real gesture, missing clips skipped rather than erroring, `suspendForAd` /
+      `resumeAfterAd` restoring the pre-ad state. Shot SFX throttled to 1/90ms
+- [x] `ui/Backdrop.ts`: tiled pattern over the whole canvas (so desktop side
+      margins are not flat colour) plus a baked vignette shown as four cropped
+      edge strips
+- [x] No webfont: `FONT_STACK` (system monospace) replaces all 18 hardcoded
+      `fontFamily: 'monospace'` occurrences
+- [x] `PreloadScene` is real: loading bar, portal `loadingFinished()`, then Menu
+- [x] Verified: 20/20 scripted checks, Phases 1–4 regression still green,
+      simulator unchanged. See "measurements" below
+
+### Deviations from the frozen file tree
+
+- `src/ui/Effects.ts`, `src/ui/Backdrop.ts`, `src/services/ArtService.ts`,
+  `src/services/assetProbe.ts`, `src/config/assets.ts`, `debug-atlas/` — all new.
+- The spec asked for tween-based animation throughout. Continuous motion (bob,
+  recoil, hit flash) is a per-frame offset instead, for the reason above; the
+  one-shots are tweens as specified.
+
+### Measurements
+
+Measured at 500x900 with 30 tanks and 14 T6 units on screen, in this container,
+which has no GPU and rasterises WebGL in software (SwiftShader):
+
+| | fps | script |
+|---|---|---|
+| everything on | 22–24 | 2.0–2.6 ms/frame |
+| backdrop hidden | 31–32 | 2.1 ms/frame |
+| backdrop + vignette hidden | 49–54 | 1.8 ms/frame |
+| board also hidden | 58–59 | 1.4 ms/frame |
+
+The fps column is fill-rate, not our code. Scaling the backdrop quad alone
+confirms it: 113k px costs 0.8 ms/frame, 253k costs 4.1, 450k costs 9.8 —
+superlinear in *area*, which is what a software rasteriser under memory pressure
+does, and about 22 ns per pixel. A real GPU blends a 500x900 quad in well under
+0.5 ms. **Script time is the number that transfers: ~2 ms/frame at 30 enemies.**
+
+Two real fixes came out of this, both cutting work rather than pixels:
+
+- The vignette started as a live `Graphics`. Phaser re-tessellates a Graphics
+  command buffer every frame it is drawn, so a dozen full-screen alpha strokes
+  were being rebuilt 60 times a second for an image that only changes on resize.
+  Baking it: 19.6 → 22.3 fps, script 2.86 → 2.49 ms/frame. This is the same trap
+  as the Phase 2 unit shapes (`entities/shapeTextures.ts`) — worth remembering
+  that it is easy to walk into twice.
+- The transparent middle of a vignette costs as much to blend as its visible
+  edges, so it is drawn as four crops of the one texture and the centre of the
+  screen is left alone.
+
+### Still open
+
+- **Four files crossed 300 lines** (rule 10 says propose the split, so:)
+  - `entities/Unit.ts` 314 → move the tier palette and `ensureUnitTextures` /
+    `unitTextureKey` / `tierFillColor` into `entities/placeholderArt.ts`, beside
+    `shapeTextures.ts`. Purely mechanical; takes Unit to ~250 and gives Enemy's
+    identical baking block somewhere to go too.
+  - `core/MergeSystem.ts` 315 → split the pointer interaction (press, threshold,
+    drag, drop highlight) into `core/DragController.ts`, leaving MergeSystem the
+    rules (`canMerge`, `previewDrop`, `applyDrop`, `healNeighbours`). The rules
+    half is what the simulator would want, and it has no Phaser input in it.
+  - `core/RunFlow.ts` 309 → session control (pause, resume, revive, restart,
+    menu, game over) is a separable concern from the wave → draft → wave loop.
+  - `core/CombatSystem.ts` 308 → projectile flight and hit resolution could move
+    to `core/Projectiles.ts`, leaving enemy movement, melee and firing.
+- The 44px touch minimum is still violated in phone landscape (cell 28px). The
+  fix is SPEC 3's side-panel HUD layout; it is a layout change, not an art one,
+  and it is still not done. Flagged since Phase 1.
 
 ## Phase 7 — Meta progression and saving
 

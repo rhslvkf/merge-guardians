@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 
-import { MIN_TOUCH_CELL_PX, Palette } from '../config/constants';
+import { FONT_STACK } from '../config/assets';
+import { MIN_TOUCH_CELL_PX, Palette, RegistryKey } from '../config/constants';
 import { t } from '../i18n';
+import type { AudioService } from '../services/AudioService';
 
 /**
  * Shared button: pointer states, a disabled state carrying a reason label, and
@@ -26,6 +28,7 @@ export class Button extends Phaser.GameObjects.Container {
   private readonly hitArea = new Phaser.Geom.Rectangle(0, 0, 0, 0);
   private readonly onClick: () => void;
   private readonly fill: number;
+  private readonly audio?: AudioService;
 
   private buttonWidth = 0;
   private buttonHeight = 0;
@@ -36,11 +39,12 @@ export class Button extends Phaser.GameObjects.Container {
     super(scene, 0, 0);
     this.onClick = options.onClick;
     this.fill = options.fill ?? Palette.buttonFill;
+    this.audio = scene.registry.get(RegistryKey.Audio) as AudioService | undefined;
 
     this.background = scene.add.graphics();
     this.label = scene.add
       .text(0, 0, t(options.labelKey), {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.buttonLabel,
       })
@@ -97,7 +101,9 @@ export class Button extends Phaser.GameObjects.Container {
     const wasPressed = this.isPressed;
     this.isPressed = false;
     this.redraw();
-    if (wasPressed && this.isEnabled) this.onClick();
+    if (!wasPressed || !this.isEnabled) return;
+    this.audio?.play('button');
+    this.onClick();
   }
 
   private handleOut(): void {

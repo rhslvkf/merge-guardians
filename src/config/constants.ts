@@ -94,10 +94,30 @@ export const Palette = {
   panelStroke: 0x3b465e,
   buttonFillDanger: 0xdc2626,
   buttonFillMuted: 0x475569,
+  /** Tiled backdrop behind the board and out into the desktop side margins. */
+  backdropBase: 0x0d1017,
+  backdropTint: 0x131826,
+  backdropSpeck: 0x1b2338,
+  vignetteEdge: 0x000000,
+  /** Screen-edge pulse when a life is lost. */
+  vignetteDanger: 0xdc2626,
 } as const;
 
-/** Screen feedback when a life is lost. */
-export const LIFE_LOST_FLASH_MS = 260;
+/**
+ * Procedural unit motion (Phase 6).
+ *
+ * Driven by a per-frame offset rather than a tween: idle bob and fire recoil
+ * both write the same `y`, and two competing tweens on one property fight every
+ * frame. An additive offset composes, and allocates nothing (rule 4).
+ */
+export const IDLE_BOB_PX = 2;
+export const IDLE_BOB_SECONDS = 1.2;
+export const RECOIL_PX = 4;
+export const RECOIL_SECONDS = 0.18;
+/** White flash on anything that just took a hit. */
+export const HIT_FLASH_SECONDS = 0.08;
+
+/** Screen feedback when a life is lost (the red vignette lives in `ui/Effects`). */
 export const LIFE_LOST_SHAKE_MS = 220;
 export const LIFE_LOST_SHAKE_INTENSITY = 0.012;
 
@@ -130,6 +150,10 @@ export const TIER_HUE_OFFSET = 0.45;
  * unit being dropped on, and below the dragged unit so the drag stays on top.
  */
 export const Depth = {
+  /** Tiled pattern behind everything, including the desktop side margins. */
+  Background: -2,
+  /** Vignette that darkens the screen edges, over the pattern, under the board. */
+  Vignette: -1,
   Board: 0,
   /** Rocks sit on the board but under everything that moves. */
   Rock: 1,
@@ -150,6 +174,8 @@ export const RegistryKey = {
   RunState: 'runState',
   Portal: 'portal',
   EnergySystem: 'energySystem',
+  Art: 'art',
+  Audio: 'audio',
 } as const;
 
 /** Vite replaces `__DEBUG__` at build time so debug logging drops out of production. */

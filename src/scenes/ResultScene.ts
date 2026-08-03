@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { DEBUG, Palette, RegistryKey, SceneKey } from '../config/constants';
 import type { RunState } from '../core/RunState';
 import { hasStage } from '../core/WaveRunner';
 import { t } from '../i18n';
 import { LayoutService } from '../services/LayoutService';
 import type { PortalAdapter } from '../services/portal/PortalAdapter';
+import { Backdrop } from '../ui/Backdrop';
 import { Button } from '../ui/Button';
 
 /**
@@ -34,16 +36,17 @@ export class ResultScene extends Phaser.Scene {
     this.layout = this.registry.get(RegistryKey.Layout) as LayoutService;
     this.run = this.registry.get(RegistryKey.RunState) as RunState;
     this.hasNextStage = hasStage(this.run.stageId + 1);
+    new Backdrop(this);
 
     // TODO(phase-8): the end-of-stage midroll fires here, after gameplayStop().
     const portal = this.registry.get(RegistryKey.Portal) as PortalAdapter | undefined;
     portal?.happytime();
     if (DEBUG) console.log('[ads] stage-end midroll would play here (commercialBreak stub)');
 
-    const mono = (color: string) => ({ fontFamily: 'monospace', color });
+    const mono = (color: string) => ({ fontFamily: FONT_STACK, color });
     this.title = this.add
       .text(0, 0, t('result.title', { n: this.run.stageId }), {
-        fontFamily: 'monospace',
+        fontFamily: FONT_STACK,
         fontStyle: 'bold',
         color: Palette.bannerText,
       })

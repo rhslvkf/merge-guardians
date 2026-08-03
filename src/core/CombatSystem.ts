@@ -12,7 +12,9 @@ import {
 } from './rules';
 import type { Unit } from '../entities/Unit';
 import { t } from '../i18n';
+import type { AudioService } from '../services/AudioService';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
+import type { Effects } from '../ui/Effects';
 import { FLOATING_TEXT_RISE_RATIO, FloatingTextPool } from '../ui/FloatingText';
 import type { EnergySystem } from './EnergySystem';
 import type { Grid } from './Grid';
@@ -37,6 +39,15 @@ const LEAK_ROW = GRID_ROWS - 0.5;
 const LABEL_POOL_SIZE = 16;
 const LABEL_SIZE_RATIO = 0.26;
 
+/**
+ * Shortest gap between two shot sounds.
+ *
+ * A late board fires twenty times a second; one clip per shot is a buzz, not
+ * feedback. Kills and merges are not throttled — those are events the player
+ * caused deliberately.
+ */
+const SHOOT_SFX_INTERVAL = 0.09;
+
 export class CombatSystem {
   /** Reused label pool so a hit or a reward allocates nothing mid-frame. */
   private readonly labels: FloatingTextPool;
@@ -48,6 +59,7 @@ export class CombatSystem {
 
   /** Current frame delta, so melee does not thread it through every call. */
   private frameDt = 0;
+  private shootSfxCooldown = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -56,7 +68,9 @@ export class CombatSystem {
     private readonly layout: LayoutService,
     private readonly enemies: EnemyPool,
     private readonly projectiles: ProjectilePool,
-    private readonly energy: EnergySystem
+    private readonly energy: EnergySystem,
+    private readonly effects: Effects,
+    private readonly audio: AudioService
   ) {
     this.labels = new FloatingTextPool(scene, LABEL_POOL_SIZE);
   }
@@ -65,10 +79,26 @@ export class CombatSystem {
     this.frameDt = dt;
     this.killsThisFrame = 0;
     this.leaksThisFrame = 0;
+    this.shootSfxCooldown -= dt;
     this.advanceEnemies(dt);
     this.fireUnits(dt);
     this.advanceProjectiles(dt);
+    this.updateVisuals(dt);
     this.labels.update(dt, this.layout.get().cell * FLOATING_TEXT_RISE_RATIO);
+  }
+
+  /**
+   * Idle bob, recoil decay and hit-flash decay, for everything on the board.
+   *
+   * One pass over fixed-size collections, writing only numbers — nothing here
+   * allocates or creates a tween (rule 4).
+   */
+  private updateVisuals(dt: number): void {
+    for (let i = 0; i < this.grid.cellCount; i++) {
+      this.grid.unitAtIndex(i)?.updateVisual(dt);
+    }
+    const active = this.enemies.active;
+    for (let i = 0; i < active.length; i++) active[i].updateVisual(dt);
   }
 
   onResize(cell: number): void {
@@ -151,6 +181,12 @@ export class CombatSystem {
       this.layout.gridToWorld(shot.col, shot.row, this.scratchPoint);
       shot.setPosition(this.scratchPoint.x, this.scratchPoint.y);
       shot.setDepth(Depth.Projectile);
+
+      unit.kickRecoil();
+      if (this.shootSfxCooldown <= 0) {
+        this.shootSfxCooldown = SHOOT_SFX_INTERVAL;
+        this.audio.play('shoot');
+      }
     }
   }
 
@@ -229,8 +265,23 @@ export class CombatSystem {
     if (enemy.takeDamage(damage)) {
       this.killsThisFrame++;
       this.grantKillReward(enemy);
+      this.playDeath(enemy);
       this.enemies.releaseAt(enemyIndex);
     }
+  }
+
+  /** Must run before the pool recycles the enemy — it reads its body. */
+  private playDeath(enemy: Enemy): void {
+    this.effects.enemyDeath(
+      enemy.x,
+      enemy.y,
+      this.layout.get().cell * 0.7,
+      enemy.bodyColor,
+      enemy.bodyTexture,
+      enemy.bodyFrame,
+      enemy.bodyScale
+    );
+    this.audio.play('enemyDeath');
   }
 
   /** +1 energy and +1 gold per kill (spec 5), shown where the enemy died. */

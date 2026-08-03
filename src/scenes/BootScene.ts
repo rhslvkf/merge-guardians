@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 
 import { DEBUG, RegistryKey, SceneKey } from '../config/constants';
 import { RunState } from '../core/RunState';
+import { ArtService } from '../services/ArtService';
+import { AudioService } from '../services/AudioService';
 import { LayoutService } from '../services/LayoutService';
 import { LocalAdapter } from '../services/portal/LocalAdapter';
 
@@ -23,15 +25,25 @@ export class BootScene extends Phaser.Scene {
     this.registry.set(RegistryKey.Layout, new LayoutService());
     this.registry.set(RegistryKey.RunState, new RunState());
 
+    // Created here rather than in PreloadScene: entities resolve their art
+    // through the registry on construction, so the service has to exist before
+    // any scene that builds one.
+    const art = new ArtService();
+    const audio = new AudioService();
+    this.registry.set(RegistryKey.Art, art);
+    this.registry.set(RegistryKey.Audio, audio);
+
     const portal = new LocalAdapter();
     this.registry.set(RegistryKey.Portal, portal);
-    void portal.init().then(() => {
-      portal.loadingFinished();
-    });
+    portal.loadingStart();
 
     if (DEBUG) console.log('[boot] portal adapter: local');
 
-    // PreloadScene stays empty until Phase 6 has assets to load.
-    this.scene.start(SceneKey.Menu);
+    // The probes run alongside portal init, so the optional packs cost one
+    // round trip rather than a serialised wait. PreloadScene then queues only
+    // the files that are actually there, and calls loadingFinished().
+    void Promise.all([portal.init(), art.probe(), audio.probe()]).then(() =>
+      this.scene.start(SceneKey.Preload)
+    );
   }
 }

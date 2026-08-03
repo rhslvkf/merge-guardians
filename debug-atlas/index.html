@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Merge Guardians — atlas index browser</title>
+    <style>
+      :root {
+        --bg: #0b0d14;
+        --panel: #151a26;
+        --line: #2a3346;
+        --text: #e8ecf5;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      header {
+        position: sticky; top: 0; z-index: 10;
+        background: var(--panel); border-bottom: 1px solid var(--line);
+        padding: 12px 16px;
+      }
+      h1 { font-size: 16px; margin: 0 0 8px; }
+      .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      label { color: var(--muted); display: flex; gap: 6px; align-items: center; }
+      input[type="number"] { width: 64px; }
+      input, select, button {
+        background: #0b0d14; color: var(--text);
+        border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px;
+        font: inherit;
+      }
+      button { cursor: pointer; }
+      button:hover { border-color: var(--accent); }
+      .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+      .hint code { color: var(--accent); }
+      section { padding: 16px; }
+      h2 { font-size: 14px; color: var(--accent); margin: 0 0 4px; }
+      .meta { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+      .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+      .cell {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
+        padding: 4px; text-align: center; cursor: pointer;
+      }
+      .cell:hover { border-color: var(--accent); }
+      .cell.picked { border-color: #4ade80; background: #17301f; }
+      .cell canvas { display: block; image-rendering: pixelated; background: #0b0d14; }
+      .cell .idx { color: var(--muted); font-size: 11px; margin-top: 2px; }
+      .missing { color: #f87171; }
+      #picks {
+        position: fixed; right: 16px; bottom: 16px; width: 320px; max-height: 40vh;
+        overflow: auto; background: var(--panel); border: 1px solid var(--line);
+        border-radius: 6px; padding: 10px; font-size: 12px;
+      }
+      #picks h3 { margin: 0 0 6px; font-size: 12px; color: var(--accent); }
+      #picks pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Atlas index browser</h1>
+      <div class="controls">
+        <label>tile
+          <input id="tile" type="number" value="16" min="4" max="128" />
+        </label>
+        <label>margin
+          <input id="margin" type="number" value="0" min="0" max="32" />
+        </label>
+        <label>spacing
+          <input id="spacing" type="number" value="1" min="0" max="32" />
+        </label>
+        <label>zoom
+          <input id="zoom" type="number" value="4" min="1" max="10" />
+        </label>
+        <button id="reload">redraw</button>
+        <button id="clear">clear picks</button>
+      </div>
+      <p class="hint">
+        Click a tile to add it to the pick list. Kenney packed tilemaps usually
+        use <code>spacing 1, margin 0</code>; if the tiles look sheared, nudge
+        margin/spacing until each cell frames one sprite cleanly. Frame numbers
+        are row-major from 0 — the same order Phaser assigns.
+      </p>
+    </header>
+    <main id="sheets"></main>
+    <div id="picks"><h3>picked frames</h3><pre id="picklist">(none yet)</pre></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-import { EnemyPalette, Palette } from '../config/constants';
+import { EnemyPalette, HIT_FLASH_SECONDS, Palette, RegistryKey } from '../config/constants';
 import {
   ENEMY_TYPES,
   SECONDS_PER_CELL,
@@ -8,13 +8,14 @@ import {
   type EnemyType,
   type EnemyTypeConfig,
 } from '../core/rules';
+import type { ArtService } from '../services/ArtService';
 import { bakeTexture } from './shapeTextures';
 
 /**
  * An enemy marching down one column.
  *
- * Placeholder art: a diamond coloured by type plus an HP bar. Phase 6 replaces
- * it with a sprite.
+ * Art comes from the sprite sheet when the pack is installed, and falls back to
+ * the type-coloured diamond when it is not — see ArtService.
  *
  * Position is `cellRow + progress`, where `cellRow` is the integer cell it
  * occupies and `progress` runs 0..1 toward the next one. Keeping them apart is
@@ -29,6 +30,8 @@ export { ENEMY_TYPES, SECONDS_PER_CELL, enemyHp as enemyHpFor };
 export type { EnemyType, EnemyTypeConfig };
 
 const BODY_SCALE = 0.7;
+/** Sprites carry their own silhouette, so they can fill more of the cell. */
+const SPRITE_SCALE = 0.86;
 const HP_BAR_HEIGHT_RATIO = 0.08;
 const HP_BAR_GAP_RATIO = 0.08;
 
@@ -85,15 +88,39 @@ export class Enemy extends Phaser.GameObjects.Container {
 
   private readonly shape: Phaser.GameObjects.Image;
   private readonly hpBar: Phaser.GameObjects.Graphics;
+  private readonly art?: ArtService;
   private lastCell = 0;
+  private flashT = 0;
 
   constructor(scene: Phaser.Scene) {
     super(scene, 0, 0);
+    this.art = scene.registry.get(RegistryKey.Art) as ArtService | undefined;
     // Real texture is assigned in redraw(), once the cell size is known.
     this.shape = scene.add.image(0, 0, '__DEFAULT');
     this.hpBar = scene.add.graphics();
     this.add([this.shape, this.hpBar]);
     scene.add.existing(this);
+  }
+
+  /** Colour the death shards take, so the kill reads as the type that died. */
+  get bodyColor(): number {
+    return EnemyPalette[this.enemyType];
+  }
+
+  /**
+   * The body as a texture reference, so the death effect can keep showing it
+   * after the pool has already recycled this instance.
+   */
+  get bodyTexture(): string {
+    return this.shape.texture.key;
+  }
+
+  get bodyFrame(): string | number {
+    return this.shape.frame.name;
+  }
+
+  get bodyScale(): number {
+    return this.shape.scaleX;
   }
 
   /** Fractional row used by movement, targeting and collision. */
@@ -115,7 +142,9 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.immuneToTierAtOrBelow = config.immuneToTierAtOrBelow ?? 0;
     this.showTopHealthBar = config.showTopHealthBar === true;
 
-    this.setActive(true).setVisible(true);
+    this.flashT = 0;
+    this.shape.clearTint();
+    this.setActive(true).setVisible(true).setAlpha(1).setScale(1);
     this.redraw(cell);
     return this;
   }
@@ -124,6 +153,7 @@ export class Enemy extends Phaser.GameObjects.Container {
   takeDamage(amount: number): boolean {
     if (this.hp <= 0) return false;
     this.hp -= amount;
+    this.flash();
     if (this.hp <= 0) {
       this.hp = 0;
       return true;
@@ -132,10 +162,32 @@ export class Enemy extends Phaser.GameObjects.Container {
     return false;
   }
 
+  /** Brief white flash. Cleared by `updateVisual`, so it costs no timer. */
+  flash(): void {
+    if (this.flashT <= 0) this.shape.setTintFill(0xffffff);
+    this.flashT = HIT_FLASH_SECONDS;
+  }
+
+  /** Per-frame visual decay. Allocates nothing (rule 4). */
+  updateVisual(dt: number): void {
+    if (this.flashT <= 0) return;
+    this.flashT -= dt;
+    if (this.flashT <= 0) this.shape.clearTint();
+  }
+
   redraw(cell: number): void {
     this.lastCell = cell;
-    ensureEnemyTextures(this.scene, cell);
-    this.shape.setTexture(enemyTextureKey(this.enemyType));
+
+    const ref = this.art?.enemy(this.enemyType) ?? null;
+    if (ref) {
+      this.shape.setTexture(ref.key, ref.frame);
+      const source = Math.max(this.shape.frame.width, this.shape.frame.height);
+      this.shape.setScale(source > 0 ? (cell * SPRITE_SCALE) / source : 1);
+    } else {
+      ensureEnemyTextures(this.scene, cell);
+      this.shape.setTexture(enemyTextureKey(this.enemyType)).setScale(1);
+    }
+
     this.drawHpBar();
   }
 

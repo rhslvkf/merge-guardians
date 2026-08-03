@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import balance from '../config/balance.json';
 import { DEBUG, Depth, GRID_COLS, GRID_ROWS, Palette } from '../config/constants';
 import type { LayoutService, WorldPoint } from '../services/LayoutService';
@@ -52,7 +53,7 @@ export class ModifierSystem {
   ) {
     this.bombGfx = scene.add.graphics().setDepth(Depth.Bomb).setVisible(false);
     this.bombLabel = scene.add
-      .text(0, 0, '', { fontFamily: 'monospace', fontStyle: 'bold', color: Palette.bombText })
+      .text(0, 0, '', { fontFamily: FONT_STACK, fontStyle: 'bold', color: Palette.bombText })
       .setOrigin(0.5)
       .setDepth(Depth.Bomb)
       .setVisible(false);

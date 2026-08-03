@@ -2,7 +2,9 @@ import Phaser from 'phaser';
 
 import { DRAG_THRESHOLD_PX, Depth, Palette } from '../config/constants';
 import type { Unit } from '../entities/Unit';
+import type { AudioService } from '../services/AudioService';
 import type { CellCoord, LayoutService, WorldPoint } from '../services/LayoutService';
+import type { Effects } from '../ui/Effects';
 import type { Grid } from './Grid';
 import type { RunState } from './RunState';
 import { MERGE_HEAL_FRACTION } from './UpgradeSystem';
@@ -62,7 +64,9 @@ export class MergeSystem {
     private readonly scene: Phaser.Scene,
     private readonly grid: Grid,
     private readonly run: RunState,
-    private readonly layout: LayoutService
+    private readonly layout: LayoutService,
+    private readonly effects: Effects,
+    private readonly audio: AudioService
   ) {
     this.highlight = scene.add.graphics().setDepth(Depth.Highlight);
   }
@@ -231,14 +235,43 @@ export class MergeSystem {
     if (this.grid.worldToGrid(pointer.x, pointer.y, this.scratchCell)) {
       const outcome = this.applyDrop(unit, this.scratchCell.col, this.scratchCell.row);
       if (outcome.kind === 'merge') {
-        outcome.absorbed?.redraw(this.layout.get().cell);
-        unit.destroy();
+        this.playMergeFeedback(unit, outcome.absorbed);
         return;
       }
     }
 
     // move, swap and rejected drops all end with every unit back on its cell.
     this.snapAllUnits();
+  }
+
+  /**
+   * Two beats: the dragged unit is sucked in, *then* the survivor pops.
+   *
+   * The tier has already changed in `applyDrop` — the survivor keeps showing
+   * its old face for the 130ms of the absorb, which is exactly what makes the
+   * pop read as a promotion rather than a swap.
+   */
+  private playMergeFeedback(consumed: Unit, absorbed: Unit | null): void {
+    if (!absorbed) {
+      consumed.destroy();
+      return;
+    }
+
+    const cell = this.layout.get().cell;
+    this.layout.gridToWorld(absorbed.col, absorbed.row, this.scratchPoint);
+    const toX = this.scratchPoint.x;
+    const toY = this.scratchPoint.y;
+
+    consumed.setDepth(Depth.Dragging);
+    this.effects.mergeAbsorb(consumed, toX, toY, () => {
+      consumed.destroy();
+      // Combat can kill the survivor inside those 130ms.
+      if (!absorbed.scene) return;
+      absorbed.redraw(cell);
+      this.effects.mergePop(absorbed);
+      this.effects.ring(toX, toY, cell * 0.5, Palette.mergeHighlight);
+      this.audio.play('merge');
+    });
   }
 
   private resetDrag(): void {

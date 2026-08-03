@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 
+import { FONT_STACK } from '../config/assets';
 import { Depth } from '../config/constants';
 
 /**
@@ -26,7 +27,7 @@ export class FloatingTextPool {
   constructor(scene: Phaser.Scene, size: number) {
     for (let i = 0; i < size; i++) {
       const text = scene.add
-        .text(0, 0, '', { fontFamily: 'monospace', fontStyle: 'bold' })
+        .text(0, 0, '', { fontFamily: FONT_STACK, fontStyle: 'bold' })
         .setOrigin(0.5)
         .setDepth(Depth.FloatingText)
         .setVisible(false);

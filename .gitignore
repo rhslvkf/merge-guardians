@@ -5,3 +5,7 @@ dist-portal/
 .DS_Store
 *.local
 .vite/
+
+# Hand-installed CC0 archives — see docs/ASSETS.md. The extracted sheets under
+# public/assets/sheets/ are committed; the source zips are not.
+public/assets/raw/
